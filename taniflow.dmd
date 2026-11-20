@@ -1,0 +1,8 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<OSDM_Design class="oracle.dbtools.crest.model.design.Design" name="taniflow" id="93334777-5491-387D-0017-0D4EF1764829" version="3.5">
+<createdBy>THINKPAD T14s</createdBy>
+<createdTime>2026-11-03 16:37:20 UTC</createdTime>
+<ownerDesignName>taniflow</ownerDesignName>
+<capitalNames>false</capitalNames>
+<designId>93334777-5491-387D-0017-0D4EF1764829</designId>
+</OSDM_Design>
