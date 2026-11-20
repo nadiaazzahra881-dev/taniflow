@@ -1,12 +1,13 @@
 from koneksi import buka_koneksi
 import psycopg2
-
+from bantuan import clear
 
 # =====================================
 # 1. DASHBOARD ADMIN
 # =====================================
 
 def dashboard():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -80,6 +81,7 @@ def lihat_petani(cursor):
 
 
 def tambah_petani():
+    clear()
     print("\n========== TAMBAH PETANI ==========")
 
     nama = input("Nama petani: ")
@@ -138,6 +140,7 @@ def tambah_petani():
 
 
 def ubah_petani():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -207,6 +210,7 @@ def ubah_petani():
 
 
 def hapus_petani():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -245,6 +249,7 @@ def hapus_petani():
 
 def kelola_petani():
     while True:
+        clear()
         print("\n========== KELOLA DATA PETANI ==========")
         print("1. Tambah Petani")
         print("2. Lihat Petani")
@@ -284,6 +289,7 @@ def kelola_petani():
 # =====================================
 
 def lihat_produk():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -331,6 +337,7 @@ def lihat_produk():
 # =====================================
 
 def pilih_kategori(cursor):
+    clear()
     cursor.execute("""
         SELECT id_kategori, nama_kategori
         FROM kategori_produk
@@ -348,6 +355,7 @@ def pilih_kategori(cursor):
 
 
 def tambah_produk(id_admin):
+    clear()
     print("\n========== TAMBAH PRODUK ==========")
 
     nama = input("Nama produk: ")
@@ -403,6 +411,7 @@ def tambah_produk(id_admin):
 
 
 def ubah_produk():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -475,6 +484,7 @@ def ubah_produk():
 
 
 def hapus_produk():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -523,6 +533,7 @@ def hapus_produk():
 
 def menu_produk(id_admin):
     while True:
+        clear()
         print("\n========== KELOLA PRODUK ==========")
         print("1. Tambah Produk")
         print("2. Ubah Produk")
@@ -552,6 +563,7 @@ def menu_produk(id_admin):
 # =====================================
 
 def lihat_stok():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -594,6 +606,7 @@ def lihat_stok():
 # =====================================
 
 def lihat_hasil_panen():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -648,6 +661,7 @@ def lihat_hasil_panen():
 # =====================================
 
 def terima_hasil_panen(id_admin):
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -789,6 +803,7 @@ def terima_hasil_panen(id_admin):
 # =====================================
 
 def lihat_transaksi():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -860,6 +875,7 @@ def lihat_transaksi():
 # =====================================
 
 def laporan_penjualan():
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -914,6 +930,7 @@ def laporan_penjualan():
 
 def menu_admin(id_admin):
     while True:
+        clear()
         print("\n========== MENU ADMIN ==========")
         print("1. Dashboard")
         print("2. Kelola Data Petani")

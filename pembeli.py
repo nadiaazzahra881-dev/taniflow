@@ -1,12 +1,13 @@
 from koneksi import buka_koneksi
 import psycopg2
-
+from bantuan import clear
 
 # ==========================================
 # 1. MELIHAT PRODUK
 # ==========================================
 
 def lihat_produk():
+    clear()
     print("\n========== DAFTAR PRODUK ==========")
 
     koneksi = buka_koneksi()
@@ -58,6 +59,7 @@ def lihat_produk():
 # ==========================================
 
 def beli_produk(id_pembeli):
+    clear()
     print("\n========== PEMBELIAN PRODUK ==========")
 
     lihat_produk()
@@ -196,6 +198,7 @@ def beli_produk(id_pembeli):
 # ==========================================
 
 def bayar_transaksi(id_pembeli):
+    clear()
     print("\n========== PEMBAYARAN ==========")
 
     koneksi = buka_koneksi()
@@ -336,6 +339,7 @@ def bayar_transaksi(id_pembeli):
 # ==========================================
 
 def periksa_stok():
+    clear()
     print("\n========== KETERSEDIAAN STOK ==========")
 
     lihat_produk()
@@ -346,6 +350,7 @@ def periksa_stok():
 # ==========================================
 
 def riwayat_transaksi(id_pembeli):
+    clear()
     print("\n========== RIWAYAT TRANSAKSI ==========")
 
     koneksi = buka_koneksi()
@@ -413,6 +418,7 @@ def riwayat_transaksi(id_pembeli):
 
 def menu_pembeli(id_pembeli):
     while True:
+        clear()
         print("\n========== MENU PEMBELI ==========")
         print("1. Melihat Produk")
         print("2. Memilih Produk")

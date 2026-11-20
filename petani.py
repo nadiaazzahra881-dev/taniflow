@@ -1,13 +1,14 @@
 
 from koneksi import buka_koneksi
 import psycopg2
-
+from bantuan import clear
 
 # =====================================
 # 1. MENGIRIM DATA HASIL PANEN
 # =====================================
 
 def kirim_pengajuan(id_petani):
+    clear()
     print("\n========== PENGAJUAN HASIL PANEN ==========")
 
     jumlah = input("Jumlah panen yang diajukan: ")
@@ -68,6 +69,7 @@ def kirim_pengajuan(id_petani):
 # =====================================
 
 def lihat_hasil_panen(id_petani):
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -119,6 +121,7 @@ def lihat_hasil_panen(id_petani):
 # =====================================
 
 def riwayat_pengajuan(id_petani):
+    clear()
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -167,6 +170,7 @@ def riwayat_pengajuan(id_petani):
 
 def menu_petani(id_petani):
     while True:
+        clear()
         print("\n========== MENU PETANI ==========")
         print("1. Mengirim Data Hasil Panen")
         print("2. Melihat Data Hasil Panen")

@@ -2,13 +2,14 @@ from koneksi import buka_koneksi
 import psycopg2
 from admin import menu_admin
 from pembeli import menu_pembeli
-
+from bantuan import clear
 # =========================
 # FUNGSI LOGIN
 # =========================
 
 
 def login():
+    clear()
     print("\n===== LOGIN TANIFLOW =====")
 
     no_telepon = input("Masukkan nomor telepon: ")
@@ -57,6 +58,8 @@ def login():
             print("Selamat datang,", nama)
             print("Role:", role)
 
+            input("\nTekan Enter untuk melanjutkan...")
+
             # Mengarahkan pengguna sesuai role
             if role == "Admin":
                 menu_admin(id_pengguna)
@@ -87,6 +90,7 @@ def login():
 # =========================
 
 def registrasi():
+    clear()
     print("\n===== REGISTRASI TANIFLOW =====")
     print("1. Petani")
     print("2. Pembeli")
@@ -237,6 +241,7 @@ def registrasi():
 
 def main():
     while True:
+        clear()
         print("\n========== TANIFLOW ==========")
         print("1. Login")
         print("2. Registrasi")
@@ -246,9 +251,11 @@ def main():
 
         if pilihan == "1":
             login()
+            input("\nTekan Enter untuk kembali ke menu utama...")
 
         elif pilihan == "2":
             registrasi()
+            input("\nTekan Enter untuk kembali ke menu utama...")
 
         elif pilihan == "3":
             print("\nTerima kasih telah menggunakan TaniFlow!")
@@ -256,6 +263,7 @@ def main():
 
         else:
             print("Pilihan tidak valid!")
+            input("\nTekan Enter untuk kembali ke menu utama...")
 
 
 # Menjalankan program
