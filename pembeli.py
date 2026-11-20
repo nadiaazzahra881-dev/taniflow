@@ -124,6 +124,22 @@ def beli_produk(id_pembeli):
             print("Pembelian dibatalkan.")
             return
 
+         # Mengambil ID Admin
+        cursor.execute("""
+            SELECT id_admin
+            FROM admin
+            ORDER BY id_admin
+            LIMIT 1
+        """)
+
+        admin = cursor.fetchone()
+
+        if admin is None:
+            print("Belum ada Admin yang terdaftar.")
+            return
+
+        id_admin = admin[0]
+
         # Membuat ID transaksi baru
         cursor.execute("""
             SELECT COALESCE(MAX(id_transaksi), 0) + 1
@@ -154,9 +170,9 @@ def beli_produk(id_pembeli):
             )
             VALUES (
                 %s, CURRENT_DATE, %s, %s,
-                NULL, NULL, 'Belum Dibayar', NULL
+                NULL, NULL, 'Belum Dibayar', %s
             )
-        """, (id_transaksi, total_harga, id_pembeli))
+        """, (id_transaksi, total_harga, id_pembeli, id_admin))
 
         # Menyimpan detail transaksi
         cursor.execute("""
@@ -306,24 +322,23 @@ def bayar_transaksi(id_pembeli):
                 WHERE id_produk = %s
             """, (barang[1], barang[0]))
 
-        # Memperbarui status pembayaran
+        # Memperbarui status transaksi
         cursor.execute("""
             UPDATE transaksi
-            SET tanggal_pembayaran = CURRENT_DATE,
-                metode_pembayaran = %s,
-                status_pembayaran = 'Sudah Dibayar'
+            SET metode_pembayaran = %s,
+                status_pembayaran = 'Diproses'
             WHERE id_transaksi = %s
               AND pembeli_id_pembeli = %s
         """, (metode, id_transaksi, id_pembeli))
 
         koneksi.commit()
 
-        print("\nPembayaran berhasil!")
+        print("\nPembayaran berhasil dikonfirmasi!")
         print("ID Transaksi :", id_transaksi)
         print("Total Bayar  : Rp", total_harga)
         print("Metode       :", metode)
-        print("Status       : Sudah Dibayar")
-        print("Stok produk berhasil diperbarui.")
+        print("Status       : Diproses")
+        print("Menunggu konfirmasi Admin.")
 
     except psycopg2.Error as error:
         koneksi.rollback()

@@ -671,21 +671,16 @@ def terima_hasil_panen(id_admin):
 
     try:
         cursor.execute("""
-            SELECT pg.id_pengajuan,
-                   pet.nama_petani,
-                   pg.jumlah_diajukan,
-                   pg.status_pengajuan
-            FROM pengajuan_panen pg
-            JOIN petani pet
-                ON pg.petani_id_petani = pet.id_petani
-            WHERE pg.status_pengajuan = 'Disetujui'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM hasil_panen h
-                  WHERE h.pengajuan_panen_id_pengajuan = pg.id_pengajuan
-              )
-            ORDER BY pg.id_pengajuan
-        """)
+    SELECT pg.id_pengajuan,
+           pet.nama_petani,
+           pg.jumlah_diajukan,
+           pg.status_pengajuan
+    FROM pengajuan_panen pg
+    JOIN petani pet
+        ON pg.petani_id_petani = pet.id_petani
+    WHERE pg.status_pengajuan = 'Disetujui'
+    ORDER BY pg.id_pengajuan
+    """)
 
         data = cursor.fetchall()
 
@@ -704,17 +699,11 @@ def terima_hasil_panen(id_admin):
         id_pengajuan = input("\nMasukkan ID pengajuan yang diterima: ")
 
         cursor.execute("""
-            SELECT jumlah_diajukan
-            FROM pengajuan_panen
-            WHERE id_pengajuan = %s
-              AND status_pengajuan = 'Disetujui'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM hasil_panen
-                  WHERE pengajuan_panen_id_pengajuan = %s
-              )
-        """, (id_pengajuan, id_pengajuan))
-
+        SELECT jumlah_diajukan
+        FROM pengajuan_panen
+        WHERE id_pengajuan = %s
+        AND status_pengajuan = 'Disetujui'
+        """, (id_pengajuan,))
         pengajuan = cursor.fetchone()
 
         if pengajuan is None:
@@ -869,9 +858,128 @@ def lihat_transaksi():
         cursor.close()
         koneksi.close()
 
+# =====================================
+# 9. KONFIRMASI PEMBAYARAN
+# =====================================
+
+def konfirmasi_pembayaran(id_admin):
+    clear()
+    print("\n========== KONFIRMASI PEMBAYARAN ==========")
+
+    koneksi = buka_koneksi()
+
+    if koneksi is None:
+        return
+
+    cursor = koneksi.cursor()
+
+    try:
+        # Menampilkan transaksi yang menunggu konfirmasi
+        cursor.execute("""
+            SELECT id_transaksi, tanggal_transaksi,
+                   total_harga, metode_pembayaran
+            FROM transaksi
+            WHERE status_pembayaran = 'Diproses'
+              AND admin_id_admin = %s
+            ORDER BY id_transaksi
+        """, (id_admin,))
+
+        data = cursor.fetchall()
+
+        if len(data) == 0:
+            print("Tidak ada transaksi yang menunggu konfirmasi.")
+            return
+
+        for transaksi in data:
+            print("\nID Transaksi :", transaksi[0])
+            print("Tanggal      :", transaksi[1])
+            print("Total Harga  : Rp", transaksi[2])
+            print("Metode       :", transaksi[3])
+
+        id_transaksi = input("\nMasukkan ID transaksi: ")
+
+        # Mengambil detail transaksi dan memeriksa stok
+        cursor.execute("""
+            SELECT d.produk_id_produk,
+                   d.jumlah,
+                   p.nama_produk,
+                   p.stok
+            FROM detail_transaksi d
+            JOIN produk p
+                ON d.produk_id_produk = p.id_produk
+            JOIN transaksi t
+                ON d.transaksi_id_transaksi = t.id_transaksi
+            WHERE d.transaksi_id_transaksi = %s
+              AND t.status_pembayaran = 'Diproses'
+              AND t.admin_id_admin = %s
+            FOR UPDATE OF p
+        """, (id_transaksi, id_admin))
+
+        detail = cursor.fetchall()
+
+        if len(detail) == 0:
+            print("Transaksi tidak ditemukan atau tidak bisa dikonfirmasi.")
+            koneksi.rollback()
+            return
+
+        # Memeriksa ketersediaan stok
+        stok_cukup = True
+
+        for barang in detail:
+            if float(barang[1]) > float(barang[3]):
+                print("\nStok", barang[2], "tidak mencukupi.")
+                stok_cukup = False
+
+        if not stok_cukup:
+            print("Pembayaran belum dapat dikonfirmasi.")
+            koneksi.rollback()
+            return
+
+        # Meminta konfirmasi Admin
+        konfirmasi = input(
+            "\nApakah pembayaran sudah diterima? (y/n): "
+        )
+
+        if konfirmasi.lower() != "y":
+            koneksi.rollback()
+            print("Konfirmasi pembayaran dibatalkan.")
+            return
+
+        # Mengurangi stok produk
+        for barang in detail:
+            cursor.execute("""
+                UPDATE produk
+                SET stok = stok - %s
+                WHERE id_produk = %s
+            """, (barang[1], barang[0]))
+
+        # Mengubah status pembayaran
+        cursor.execute("""
+            UPDATE transaksi
+            SET tanggal_pembayaran = CURRENT_DATE,
+                status_pembayaran = 'Sudah Dibayar'
+            WHERE id_transaksi = %s
+              AND admin_id_admin = %s
+              AND status_pembayaran = 'Diproses'
+        """, (id_transaksi, id_admin))
+
+        koneksi.commit()
+
+        print("\nPembayaran berhasil dikonfirmasi!")
+        print("ID Transaksi :", id_transaksi)
+        print("Status       : Sudah Dibayar")
+        print("Stok produk berhasil dikurangi.")
+
+    except psycopg2.Error as error:
+        koneksi.rollback()
+        print("Gagal mengonfirmasi pembayaran:", error)
+
+    finally:
+        cursor.close()
+        koneksi.close()
 
 # =====================================
-# 9. LAPORAN PENJUALAN
+# 10. LAPORAN PENJUALAN
 # =====================================
 
 def laporan_penjualan():
@@ -940,8 +1048,9 @@ def menu_admin(id_admin):
         print("6. Melihat Data Hasil Panen")
         print("7. Mencatat Penerimaan Hasil Panen")
         print("8. Melihat Data Transaksi")
-        print("9. Melihat Laporan Penjualan")
-        print("10. Logout")
+        print("9. Konfirmasi Pembayaran")
+        print("10. Melihat Laporan Penjualan")
+        print("11. Logout")
 
         pilihan = input("Pilih menu: ")
 
@@ -970,9 +1079,12 @@ def menu_admin(id_admin):
             lihat_transaksi()
 
         elif pilihan == "9":
-            laporan_penjualan()
+            konfirmasi_pembayaran(id_admin)
 
         elif pilihan == "10":
+            laporan_penjualan()
+
+        elif pilihan == "11":
             print("Anda berhasil logout.")
             break
 
