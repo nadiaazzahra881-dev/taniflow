@@ -264,8 +264,6 @@ def kirim_pengajuan(id_petani):
 
     jeda()
 
-
-
 # =====================================
 # 2. MELIHAT DATA HASIL PANEN
 # =====================================
