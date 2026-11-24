@@ -17,10 +17,9 @@ def login():
     print("=" * 55)
     print("                   LOGIN AKUN  ")
     print("-" * 55)
-    print("   Silakan masukkan informasi akun Anda.")
-    print("-" * 55)
+    print("Silakan masukkan informasi akun Anda:")
 
-    no_telepon = input("  Nomor telepon     : ").strip()
+    no_telepon = input("\n  Nomor telepon     : ").strip()
     
     if not no_telepon:
         print("\n  [!] Nomor telepon tidak boleh kosong!")

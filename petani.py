@@ -7,8 +7,6 @@ from bantuan import clear, jeda
 # 1. MENGIRIM DATA HASIL PANEN
 # =====================================
 
-
-
 def kirim_pengajuan(id_petani):
     clear()
     print("\n========== PENGAJUAN HASIL PANEN ==========")
