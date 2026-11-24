@@ -932,90 +932,142 @@ def lihat_hasil_panen():
         cursor.close()
         koneksi.close()
 
+    jeda()
 
-# =====================================
-# 7. MENCATAT PENERIMAAN HASIL PANEN
-# =====================================
 
-def terima_hasil_panen(id_admin):
+def setujui_pengajuan(id_admin):
     clear()
+    print("\n========== PERSETUJUAN PENGAJUAN PANEN ==========")
+
     koneksi = buka_koneksi()
 
     if koneksi is None:
+        print("\nGagal terhubung ke database!")
+        jeda()
         return
 
-    cursor = koneksi.cursor()
+    cursor = None
 
     try:
+        cursor = koneksi.cursor()
+
+        # Menampilkan pengajuan yang menunggu persetujuan
         cursor.execute("""
-    SELECT pg.id_pengajuan,
-           pet.nama_petani,
-           pg.jumlah_diajukan,
-           pg.status_pengajuan
-    FROM pengajuan_panen pg
-    JOIN petani pet
-        ON pg.petani_id_petani = pet.id_petani
-    WHERE pg.status_pengajuan = 'Disetujui'
-    ORDER BY pg.id_pengajuan
-    """)
+            SELECT pg.id_pengajuan,
+                   pet.nama_petani,
+                   pg.catatan,
+                   pg.status_pengajuan
+            FROM pengajuan_panen pg
+            JOIN petani pet
+                ON pg.petani_id_petani = pet.id_petani
+            WHERE pg.status_pengajuan = 'Menunggu'
+            ORDER BY pg.id_pengajuan
+        """)
 
         data = cursor.fetchall()
 
-        print("\n========== PENGAJUAN PANEN DISETUJUI ==========")
-
         if len(data) == 0:
-            print("Tidak ada pengajuan yang siap diterima.")
+            print("\nTidak ada pengajuan yang menunggu persetujuan.")
             return
 
         for pengajuan in data:
             print("\nID Pengajuan :", pengajuan[0])
             print("Nama Petani  :", pengajuan[1])
-            print("Jumlah Ajukan:", pengajuan[2])
+            print("Catatan      :", pengajuan[2])
             print("Status       :", pengajuan[3])
 
-        id_pengajuan = input("\nMasukkan ID pengajuan yang diterima: ")
+        id_pengajuan = input(
+            "\nMasukkan ID pengajuan yang disetujui: "
+        ).strip()
 
+        if not id_pengajuan.isdigit():
+            print("\nID pengajuan harus berupa angka!")
+            return
+
+        # Mengambil catatan pengajuan
         cursor.execute("""
-        SELECT jumlah_diajukan
-        FROM pengajuan_panen
-        WHERE id_pengajuan = %s
-        AND status_pengajuan = 'Disetujui'
+            SELECT catatan
+            FROM pengajuan_panen
+            WHERE id_pengajuan = %s
+            AND status_pengajuan = 'Menunggu'
         """, (id_pengajuan,))
+
         pengajuan = cursor.fetchone()
 
         if pengajuan is None:
-            print("Pengajuan tidak ditemukan atau sudah diterima!")
+            print("\nPengajuan tidak ditemukan atau sudah diproses!")
             return
 
-        jumlah_diajukan = pengajuan[0]
+        catatan = pengajuan[0]
 
-        cursor.execute("""
-            SELECT id_produk, nama_produk, satuan
-            FROM produk
-            ORDER BY id_produk
-        """)
+        daftar_produk = []
+        produk_belum_tersedia = []
 
-        data_produk = cursor.fetchall()
+        # Membaca daftar produk dari catatan
+        for baris in catatan.split("\n"):
 
-        print("\n========== DAFTAR PRODUK ==========")
+            if not baris.startswith("- "):
+                continue
 
-        for produk in data_produk:
-            print(produk[0], "-", produk[1], "-", produk[2])
+            isi = baris[2:]
 
-        id_produk = input("Masukkan ID produk hasil panen: ")
-        jumlah = input("Jumlah panen yang diterima: ")
-        harga_beli = input("Harga beli per satuan: ")
+            if "| Jumlah: " not in isi:
+                continue
 
-        cursor.execute("""
-            SELECT id_produk
-            FROM produk
-            WHERE id_produk = %s
-        """, (id_produk,))
+            # Mengambil jumlah produk
+            bagian_jumlah = isi.split("| Jumlah: ")[1]
+            jumlah = bagian_jumlah.split()[0]
 
-        if cursor.fetchone() is None:
-            print("Produk tidak ditemukan!")
+            try:
+                jumlah = float(jumlah)
+
+                if jumlah <= 0:
+                    raise ValueError
+
+            except ValueError:
+                print("\nJumlah produk dalam catatan tidak valid!")
+                koneksi.rollback()
+                return
+
+            # Produk yang sudah tersedia
+            if "(ID: " in isi:
+
+                id_produk = isi.split("(ID: ")[1].split(")")[0]
+
+                cursor.execute("""
+                    SELECT id_produk, nama_produk, satuan, harga_jual
+                    FROM produk
+                    WHERE id_produk = %s
+                """, (id_produk,))
+
+                produk = cursor.fetchone()
+
+                if produk is None:
+                    print("\nProduk dengan ID", id_produk, "tidak ditemukan!")
+                    koneksi.rollback()
+                    return
+
+                daftar_produk.append({
+                    "id_produk": produk[0],
+                    "nama_produk": produk[1],
+                    "jumlah": jumlah,
+                    "harga_beli": produk[3]
+                })
+
+            # Produk yang belum tersedia
+            elif isi.startswith("Produk belum tersedia: "):
+
+                nama = isi.split(
+                    "Produk belum tersedia: "
+                )[1].split(" | Jumlah:")[0]
+
+                produk_belum_tersedia.append(nama)
+
+        if len(daftar_produk) == 0 and len(produk_belum_tersedia) == 0:
+            print("\nDaftar produk tidak ditemukan dalam catatan pengajuan!")
             return
 
+        # Mengambil ID hasil panen berikutnya
         cursor.execute("""
             SELECT COALESCE(MAX(id_hasil), 0) + 1
             FROM hasil_panen
@@ -1023,117 +1075,460 @@ def terima_hasil_panen(id_admin):
 
         id_hasil = cursor.fetchone()[0]
 
-        cursor.execute("""
-            INSERT INTO hasil_panen (
+        # Mencatat produk yang sudah tersedia
+        for produk in daftar_produk:
+
+            # Memastikan produk belum pernah dicatat
+            cursor.execute("""
+                SELECT id_hasil
+                FROM hasil_panen
+                WHERE pengajuan_panen_id_pengajuan = %s
+                AND produk_id_produk = %s
+            """, (
+                id_pengajuan,
+                produk["id_produk"]
+            ))
+
+            if cursor.fetchone() is not None:
+                continue
+
+            # Menyimpan hasil panen
+            cursor.execute("""
+                INSERT INTO hasil_panen (
+                    id_hasil,
+                    tanggal_penerimaan,
+                    jumlah_panen,
+                    harga_beli,
+                    produk_id_produk,
+                    pengajuan_panen_id_pengajuan
+                )
+                VALUES (
+                    %s, CURRENT_DATE, %s, %s, %s, %s
+                )
+            """, (
                 id_hasil,
-                tanggal_penerimaan,
-                jumlah_panen,
-                harga_beli,
-                produk_id_produk,
-                pengajuan_panen_id_pengajuan
-            )
-            VALUES (
-                %s, CURRENT_DATE, %s, %s, %s, %s
-            )
+                produk["jumlah"],
+                produk["harga_beli"],
+                produk["id_produk"],
+                id_pengajuan
+            ))
+
+            # Menambahkan stok produk
+            cursor.execute("""
+                UPDATE produk
+                SET stok = stok + %s
+                WHERE id_produk = %s
+            """, (
+                produk["jumlah"],
+                produk["id_produk"]
+            ))
+
+            id_hasil += 1
+
+        # Menentukan status pengajuan
+        if len(produk_belum_tersedia) > 0:
+            status = "Disetujui"
+        else:
+            status = "Diterima"
+
+        cursor.execute("""
+            UPDATE pengajuan_panen
+            SET status_pengajuan = %s,
+                admin_id_admin = %s
+            WHERE id_pengajuan = %s
         """, (
-            id_hasil,
-            jumlah,
-            harga_beli,
-            id_produk,
+            status,
+            id_admin,
             id_pengajuan
         ))
 
-        cursor.execute("""
-            UPDATE produk
-            SET stok = stok + %s
-            WHERE id_produk = %s
-        """, (jumlah, id_produk))
-
         koneksi.commit()
 
-        print("\nPenerimaan hasil panen berhasil dicatat!")
-        print("Jumlah pengajuan:", jumlah_diajukan)
-        print("ID hasil panen:", id_hasil)
+        print("\nPengajuan berhasil disetujui!")
+        print("\nProduk yang langsung masuk stok:")
 
-    except psycopg2.Error:
+        for produk in daftar_produk:
+            print(
+                "-",
+                produk["nama_produk"],
+                ":",
+                produk["jumlah"]
+            )
+
+        if len(produk_belum_tersedia) > 0:
+            print("\nProduk yang belum tersedia:")
+
+            for nama in produk_belum_tersedia:
+                print("-", nama)
+
+            print("\nSilakan tambahkan produk tersebut melalui Kelola Data Produk.")
+            print("Kemudian proses melalui menu Penerimaan Hasil Panen.")
+
+        print("\nStatus Pengajuan:", status)
+
+    except psycopg2.Error as e:
         koneksi.rollback()
-        print("Gagal mencatat penerimaan panen")
+        print("\nGagal menyetujui pengajuan!")
+        print("Terjadi kesalahan pada database.")
+        print("Detail:", e)
 
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
+
         koneksi.close()
 
+    jeda()
+
 
 # =====================================
-# 8. MELIHAT DATA TRANSAKSI
+# 7. MENCATAT PENERIMAAN HASIL PANEN
 # =====================================
 
-def lihat_transaksi():
+
+def terima_hasil_panen(id_admin):
     clear()
+    print("\n========== PENERIMAAN HASIL PANEN ==========")
+
     koneksi = buka_koneksi()
 
     if koneksi is None:
+        print("\nGagal terhubung ke database!")
+        jeda()
         return
 
-    cursor = koneksi.cursor()
+    cursor = None
 
     try:
+        cursor = koneksi.cursor()
+
+        # Menampilkan pengajuan yang sudah disetujui
         cursor.execute("""
-            SELECT t.id_transaksi,
-                   p.nama_pembeli,
-                   t.tanggal_transaksi,
-                   t.total_harga,
-                   t.status_pembayaran
-            FROM transaksi t
-            JOIN pembeli p
-                ON t.pembeli_id_pembeli = p.id_pembeli
-            ORDER BY t.tanggal_transaksi ASC
+            SELECT pg.id_pengajuan,
+                   pet.nama_petani,
+                   pg.catatan,
+                   pg.status_pengajuan
+            FROM pengajuan_panen pg
+            JOIN petani pet
+                ON pg.petani_id_petani = pet.id_petani
+            WHERE pg.status_pengajuan = 'Disetujui'
+            ORDER BY pg.id_pengajuan
         """)
 
         data = cursor.fetchall()
 
-        print("\n========== DATA TRANSAKSI ==========")
-
         if len(data) == 0:
-            print("Belum ada transaksi.")
+            print("\nTidak ada pengajuan yang siap diterima.")
+            return
 
-        else:
-            for transaksi in data:
-                print("\nID Transaksi :", transaksi[0])
-                print("Nama Pembeli :", transaksi[1])
-                print("Tanggal      :", transaksi[2])
-                print("Total Harga  :", transaksi[3])
-                print("Status Bayar :", transaksi[4])
+        for pengajuan in data:
+            print("\nID Pengajuan :", pengajuan[0])
+            print("Nama Petani  :", pengajuan[1])
+            print("Catatan      :", pengajuan[2])
+            print("Status       :", pengajuan[3])
+
+        id_pengajuan = input(
+            "\nMasukkan ID pengajuan yang diterima: "
+        ).strip()
+
+        if not id_pengajuan.isdigit():
+            print("\nID pengajuan harus berupa angka!")
+            return
+
+        # Memeriksa pengajuan
+        cursor.execute("""
+            SELECT catatan
+            FROM pengajuan_panen
+            WHERE id_pengajuan = %s
+            AND status_pengajuan = 'Disetujui'
+        """, (id_pengajuan,))
+
+        pengajuan = cursor.fetchone()
+
+        if pengajuan is None:
+            print("\nPengajuan tidak ditemukan atau sudah diproses!")
+            return
+
+        catatan = pengajuan[0]
+
+        # Membaca daftar produk dari catatan pengajuan
+        daftar_produk = []
+
+        for baris in catatan.split("\n"):
+
+            if not baris.startswith("- "):
+                continue
+
+            isi = baris[2:]
+
+            # Produk yang sudah tersedia
+            if "(ID: " in isi:
+                id_produk = isi.split("(ID: ")[1].split(")")[0]
 
                 cursor.execute("""
-                    SELECT p.nama_produk,
-                           d.jumlah,
-                           d.harga_satuan,
-                           d.jumlah * d.harga_satuan
-                    FROM detail_transaksi d
-                    JOIN produk p
-                        ON d.produk_id_produk = p.id_produk
-                    WHERE d.transaksi_id_transaksi = %s
-                """, (transaksi[0],))
+                    SELECT id_produk, nama_produk, satuan, harga_jual
+                    FROM produk
+                    WHERE id_produk = %s
+                """, (id_produk,))
 
-                detail = cursor.fetchall()
+            # Produk yang sebelumnya belum tersedia
+            elif isi.startswith("Produk belum tersedia: "):
+                nama = isi.split("Produk belum tersedia: ")[1].split(" | Jumlah:")[0]
 
-                print("Detail Produk:")
+                cursor.execute("""
+                    SELECT id_produk, nama_produk, satuan, harga_jual
+                    FROM produk
+                    WHERE LOWER(nama_produk) = LOWER(%s)
+                """, (nama,))
 
-                for item in detail:
-                    print(
-                        "-", item[0],
-                        "| Jumlah:", item[1],
-                        "| Harga:", item[2],
-                        "| Subtotal:", item[3]
-                    )
+            else:
+                continue
 
-    except psycopg2.Error as error:
-        print("Gagal menampilkan transaksi:", error)
+            produk = cursor.fetchone()
+
+            if produk is None:
+                print(
+                    "\nProduk", nama if "nama" in locals() else id_produk,
+                    "belum tersedia di database!"
+                )
+                print("Silakan tambahkan produk tersebut melalui menu Kelola Data Produk terlebih dahulu.")
+                return
+
+            daftar_produk.append({
+                "id_produk": produk[0],
+                "nama_produk": produk[1],
+                "satuan": produk[2],
+                "harga_beli": produk[3]
+            })
+
+        if len(daftar_produk) == 0:
+            print("\nDaftar produk tidak ditemukan dalam catatan pengajuan!")
+            return
+
+        # Menampilkan produk yang diajukan
+        print("\n========== PRODUK YANG DIAJUKAN ==========")
+
+        for i, produk in enumerate(daftar_produk, start=1):
+            print(
+                f"{i}. {produk['nama_produk']} "
+                f"({produk['satuan']})"
+            )
+
+        print("\n========== INPUT PENERIMAAN PANEN ==========")
+
+        daftar_diterima = []
+
+        # Admin memasukkan jumlah aktual setiap produk
+        for produk in daftar_produk:
+
+            print("\nProduk:", produk["nama_produk"])
+
+            jumlah = input(
+                "Jumlah panen yang diterima: "
+            ).strip()
+
+            try:
+                jumlah = float(jumlah)
+
+                if jumlah <= 0:
+                    print("\nJumlah harus lebih dari 0!")
+                    return
+
+            except ValueError:
+                print("\nJumlah harus berupa angka!")
+                return
+
+            daftar_diterima.append({
+                "id_produk": produk["id_produk"],
+                "nama_produk": produk["nama_produk"],
+                "jumlah": jumlah,
+                "harga_beli": produk["harga_beli"]
+            })
+
+        # Mengambil ID hasil panen berikutnya
+        cursor.execute("""
+            SELECT COALESCE(MAX(id_hasil), 0) + 1
+            FROM hasil_panen
+        """)
+
+        id_hasil = cursor.fetchone()[0]
+
+        # Menyimpan seluruh hasil panen
+        for produk in daftar_diterima:
+
+            cursor.execute("""
+                INSERT INTO hasil_panen (
+                    id_hasil,
+                    tanggal_penerimaan,
+                    jumlah_panen,
+                    harga_beli,
+                    produk_id_produk,
+                    pengajuan_panen_id_pengajuan
+                )
+                VALUES (
+                    %s, CURRENT_DATE, %s, %s, %s, %s
+                )
+            """, (
+                id_hasil,
+                produk["jumlah"],
+                produk["harga_beli"],
+                produk["id_produk"],
+                id_pengajuan
+            ))
+
+            # Memperbarui stok produk
+            cursor.execute("""
+                UPDATE produk
+                SET stok = stok + %s
+                WHERE id_produk = %s
+            """, (
+                produk["jumlah"],
+                produk["id_produk"]
+            ))
+
+            id_hasil += 1
+
+        # Mengubah status pengajuan
+        cursor.execute("""
+            UPDATE pengajuan_panen
+            SET status_pengajuan = 'Diterima',
+                admin_id_admin = %s
+            WHERE id_pengajuan = %s
+        """, (id_admin, id_pengajuan))
+
+        koneksi.commit()
+
+        print("\nPenerimaan hasil panen berhasil dicatat!")
+        print("ID Pengajuan:", id_pengajuan)
+        print("Jumlah produk diterima:", len(daftar_diterima))
+        print("Status: Diterima")
+
+        for produk in daftar_diterima:
+            print(
+                "-", produk["nama_produk"],
+                ":", produk["jumlah"]
+            )
+
+    except psycopg2.Error as e:
+        koneksi.rollback()
+        print("\nGagal mencatat penerimaan panen!")
+        print("Terjadi kesalahan pada database.")
+        print("Detail:", e)
 
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
+
         koneksi.close()
+
+    jeda()
+
+def lihat_transaksi():
+    clear()
+    print("\n========== DATA TRANSAKSI ==========")
+
+    koneksi = buka_koneksi()
+
+    if koneksi is None:
+        print("\nGagal terhubung ke database!")
+        jeda()
+        return
+
+    cursor = None
+
+    try:
+        cursor = koneksi.cursor()
+
+        cursor.execute("""
+            SELECT
+                t.id_transaksi,
+                t.tanggal_transaksi,
+                p.nama_pembeli,
+                pr.nama_produk,
+                dt.jumlah,
+                pr.satuan,
+                dt.harga_satuan,
+                dt.jumlah * dt.harga_satuan AS subtotal,
+                t.total_harga,
+                t.tanggal_pembayaran,
+                t.metode_pembayaran,
+                t.status_pembayaran,
+                a.nama_admin
+            FROM transaksi t
+            JOIN pembeli p
+                ON t.pembeli_id_pembeli = p.id_pembeli
+            JOIN detail_transaksi dt
+                ON t.id_transaksi = dt.transaksi_id_transaksi
+            JOIN produk pr
+                ON dt.produk_id_produk = pr.id_produk
+            LEFT JOIN admin a
+                ON t.admin_id_admin = a.id_admin
+            ORDER BY t.id_transaksi, dt.id_detail
+        """)
+
+        data = cursor.fetchall()
+
+        if len(data) == 0:
+            print("\nBelum ada data transaksi.")
+            return
+
+        id_sebelumnya = None
+
+        for i in range(len(data)):
+            transaksi = data[i]
+
+            if transaksi[0] != id_sebelumnya:
+
+                if id_sebelumnya is not None:
+                    print("-" * 55)
+                    print("Total Harga        :", total_harga)
+                    print("Tanggal Pembayaran :", tanggal_pembayaran)
+                    print("Metode Pembayaran  :", metode_pembayaran)
+                    print("Status Pembayaran  :", status_pembayaran)
+                    print("Admin              :", nama_admin)
+
+                print("\n" + "=" * 55)
+                print("ID Transaksi       :", transaksi[0])
+                print("Tanggal Transaksi  :", transaksi[1])
+                print("Nama Pembeli       :", transaksi[2])
+                print("-" * 55)
+                print("DAFTAR PRODUK:")
+
+                id_sebelumnya = transaksi[0]
+                total_harga = transaksi[8]
+                tanggal_pembayaran = transaksi[9]
+                metode_pembayaran = transaksi[10]
+                status_pembayaran = transaksi[11]
+                nama_admin = transaksi[12]
+
+            print(
+                "-",
+                transaksi[3],
+                "| Jumlah:", transaksi[4], transaksi[5],
+                "| Harga:", transaksi[6],
+                "| Subtotal:", transaksi[7]
+            )
+
+        print("-" * 55)
+        print("Total Harga        :", total_harga)
+        print("Tanggal Pembayaran :", tanggal_pembayaran)
+        print("Metode Pembayaran  :", metode_pembayaran)
+        print("Status Pembayaran  :", status_pembayaran)
+        print("Admin              :", nama_admin)
+
+        print("\n" + "=" * 55)
+
+    except psycopg2.Error:
+        print("\nGagal menampilkan data transaksi!")
+        print("Terjadi kesalahan pada database.")
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        koneksi.close()
+
+    jeda()
 
 # =====================================
 # 9. KONFIRMASI PEMBAYARAN
@@ -1333,11 +1728,13 @@ def menu_admin(id_admin):
         print("4. Mengelola Data Produk")
         print("5. Memeriksa Ketersediaan Stok")
         print("6. Melihat Data Hasil Panen")
-        print("7. Mencatat Penerimaan Hasil Panen")
-        print("8. Melihat Data Transaksi")
-        print("9. Konfirmasi Pembayaran")
-        print("10. Melihat Laporan Penjualan")
-        print("11. Logout")
+        print("7. Menyetujui Pengajuan Panen")
+        print("8. Mencatat Penerimaan Hasil Panen")
+        print("9. Melihat Data Transaksi")
+        print("10. Konfirmasi Pembayaran")
+        print("11. Melihat Laporan Penjualan")
+        print("12. Logout")
+                
 
         pilihan = input("Pilih menu: ")
 
@@ -1360,22 +1757,24 @@ def menu_admin(id_admin):
             lihat_hasil_panen()
 
         elif pilihan == "7":
-            terima_hasil_panen(id_admin)
+            setujui_pengajuan(id_admin)
 
         elif pilihan == "8":
-            lihat_transaksi()
+            terima_hasil_panen(id_admin)
 
         elif pilihan == "9":
-            konfirmasi_pembayaran(id_admin)
+            lihat_transaksi()
 
         elif pilihan == "10":
-            laporan_penjualan()
+            konfirmasi_pembayaran(id_admin)
 
         elif pilihan == "11":
+            laporan_penjualan()
+
+        elif pilihan == "12":
             print("Anda berhasil logout.")
             break
-
         else:
             print("Pilihan tidak valid!")
-
         jeda()
+
