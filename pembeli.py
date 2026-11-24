@@ -1,13 +1,12 @@
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear
+from bantuan import clear,jeda
 
 # ==========================================
 # 1. MELIHAT PRODUK
 # ==========================================
 
 def lihat_produk():
-    clear()
     print("\n========== DAFTAR PRODUK ==========")
 
     koneksi = buka_koneksi()
@@ -34,17 +33,21 @@ def lihat_produk():
             print("Belum ada produk.")
 
         else:
-            for produk in data:
-                print("\nID Produk   :", produk[0])
-                print("Nama Produk :", produk[1])
-                print("Kategori    :", produk[2])
-                print("Harga       : Rp", produk[3])
-                print("Stok        :", produk[4], produk[5])
+            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
+            print("| ID | Nama Produk          | Kategori       | Harga        | Stok     | Satuan | Keterangan    |")
+            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
 
+            for produk in data:
                 if produk[4] > 0:
-                    print("Keterangan  : Tersedia")
+                    keterangan = "Tersedia"
                 else:
-                    print("Keterangan  : Stok Habis")
+                    keterangan = "Stok Habis"
+
+                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | Rp {produk[3]:<9} | {produk[4]:<8} | {produk[5]:<6} | {keterangan:<13} |")
+
+            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
+
+        jeda()
 
     except psycopg2.Error as error:
         print("Gagal menampilkan produk:", error)
@@ -59,7 +62,6 @@ def lihat_produk():
 # ==========================================
 
 def beli_produk(id_pembeli):
-    clear()
     print("\n========== PEMBELIAN PRODUK ==========")
 
     lihat_produk()
@@ -68,14 +70,14 @@ def beli_produk(id_pembeli):
 
     try:
         jumlah = float(input("Masukkan jumlah pembelian: "))
-
+    
         if jumlah <= 0:
             print("Jumlah pembelian harus lebih dari 0.")
-            return
+            jeda()
 
     except ValueError:
         print("Jumlah harus berupa angka.")
-        return
+        jeda()
 
     koneksi = buka_koneksi()
 
@@ -214,7 +216,6 @@ def beli_produk(id_pembeli):
 # ==========================================
 
 def bayar_transaksi(id_pembeli):
-    clear()
     print("\n========== PEMBAYARAN ==========")
 
     koneksi = buka_koneksi()
@@ -354,7 +355,6 @@ def bayar_transaksi(id_pembeli):
 # ==========================================
 
 def periksa_stok():
-    clear()
     print("\n========== KETERSEDIAAN STOK ==========")
 
     lihat_produk()
@@ -365,7 +365,6 @@ def periksa_stok():
 # ==========================================
 
 def riwayat_transaksi(id_pembeli):
-    clear()
     print("\n========== RIWAYAT TRANSAKSI ==========")
 
     koneksi = buka_koneksi()
@@ -382,7 +381,7 @@ def riwayat_transaksi(id_pembeli):
                    metode_pembayaran, status_pembayaran
             FROM transaksi
             WHERE pembeli_id_pembeli = %s
-            ORDER BY id_transaksi DESC
+            ORDER BY id_transaksi ASC
         """, (id_pembeli,))
 
         data = cursor.fetchall()
@@ -408,6 +407,8 @@ def riwayat_transaksi(id_pembeli):
                     WHERE d.transaksi_id_transaksi = %s
                 """, (transaksi[0],))
 
+                jeda()
+
                 detail = cursor.fetchall()
 
                 print("Produk yang dibeli:")
@@ -432,6 +433,7 @@ def riwayat_transaksi(id_pembeli):
 # ==========================================
 
 def menu_pembeli(id_pembeli):
+    clear()
     while True:
         clear()
         print("\n========== MENU PEMBELI ==========")

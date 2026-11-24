@@ -2,7 +2,8 @@ from koneksi import buka_koneksi
 import psycopg2
 from admin import menu_admin
 from pembeli import menu_pembeli
-from bantuan import clear
+from bantuan import clear,jeda
+from petani import menu_petani
 # =========================
 # FUNGSI LOGIN
 # =========================
@@ -10,11 +11,39 @@ from bantuan import clear
 
 def login():
     clear()
-    print("\n===== LOGIN TANIFLOW =====")
+    print("=" * 55)
+    print("                    TANIFLOW")
+    print("             SISTEM INFORMASI PERTANIAN")
+    print("=" * 55)
+    print("                   LOGIN AKUN  ")
+    print("-" * 55)
+    print("   Silakan masukkan informasi akun Anda.")
+    print("-" * 55)
 
-    no_telepon = input("Masukkan nomor telepon: ")
-    password = input("Masukkan password: ")
+    no_telepon = input("  Nomor telepon     : ").strip()
+    
+    if not no_telepon:
+        print("\n  [!] Nomor telepon tidak boleh kosong!")
+        return
 
+    if not no_telepon.isdigit():
+        print("\n  [!] Nomor telepon harus berupa angka!")
+        return
+
+    if len(no_telepon) < 10 or len(no_telepon) > 13:
+        print("\n  [!] Nomor telepon harus terdiri dari 10-13 digit!")
+        return
+
+    password = input("  Password          : ")
+
+    if len(password) < 5:
+        print("\n  [!] Password minimal 5 karakter!")
+        return
+
+    if any(huruf.isspace() for huruf in password):
+        print("\n  [!] Password tidak boleh mengandung spasi!")
+        return
+    
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -65,7 +94,7 @@ def login():
                 menu_admin(id_pengguna)
 
             elif role == "Petani":
-                print("Menu Petani akan dibuka.")
+                menu_petani(id_pengguna)
 
             elif role == "Pembeli":
                 menu_pembeli(id_pengguna)
@@ -91,11 +120,20 @@ def login():
 
 def registrasi():
     clear()
-    print("\n===== REGISTRASI TANIFLOW =====")
-    print("1. Petani")
-    print("2. Pembeli")
 
-    pilihan = input("Pilih role: ")
+    print("=" * 55)
+    print("                    TANIFLOW")
+    print("             SISTEM INFORMASI PERTANIAN")
+    print("=" * 55)
+    print("                 REGISTRASI AKUN")
+    print("-" * 55)
+    print("  Silakan pilih jenis akun yang ingin dibuat.")
+    print()
+    print("  [1] Petani")
+    print("  [2] Pembeli")
+    print("-" * 55)
+
+    pilihan = input("  Pilih role [1/2] : ").strip()
 
     if pilihan == "1":
         role = "Petani"
@@ -103,38 +141,102 @@ def registrasi():
     elif pilihan == "2":
         role = "Pembeli"
 
-    else:
-        print("Pilihan role tidak tersedia!")
+    elif not pilihan:
+        print("\n  [!] Role tidak boleh kosong!")
         return
 
-    print("\n===== FORM REGISTRASI", role.upper(), "=====")
-
-    if role == "Petani":
-        nama = input("Nama petani: ")
     else:
-        nama = input("Nama pembeli: ")
-
-    no_telepon = input("Nomor telepon: ")
-    password = input("Password: ")
-    konfirmasi_password = input("Konfirmasi password: ")
-
-    if password != konfirmasi_password:
-        print("Konfirmasi password tidak cocok!")
+        print("\n  [!] Pilihan role tidak tersedia!")
         return
 
-    # Mengambil data alamat khusus Petani
+    clear()
+
+    print("=" * 55)
+    print("                    TANIFLOW")
+    print("=" * 55)
+    print()
+    print("              FORM REGISTRASI", role.upper())
+    print("-" * 55)
+    print("  Silakan lengkapi data akun berikut.")
+    print()
+
+    # DATA AKUN
+    print("[ DATA AKUN ]")
+    print("-" * 55)
+
     if role == "Petani":
-        print("\n===== DATA ALAMAT =====")
+        nama = input("  Nama petani       : ").strip().title()
+    else:
+        nama = input("  Nama pembeli      : ").strip().title()
 
-        nama_jalan = input("Nama jalan: ")
-        nomor_rumah = input("Nomor rumah (boleh kosong): ")
-        rt = input("RT (boleh kosong): ")
-        rw = input("RW (boleh kosong): ")
-        kelurahan = input("Kelurahan: ")
-        kecamatan = input("Kecamatan: ")
-        kota = input("Kota: ")
-        kode_pos = input("Kode pos (boleh kosong): ")
+    if not nama:
+        print("\n  [!] Nama tidak boleh kosong!")
+        return
 
+    if not all(huruf.isalpha() or huruf.isspace() for huruf in nama):
+        print("\n  [!] Nama hanya boleh mengandung huruf dan spasi!")
+        return
+
+    no_telepon = input("  Nomor telepon     : ").strip()
+
+    if not no_telepon:
+        print("\n  [!] Nomor telepon tidak boleh kosong!")
+        return
+
+    if not no_telepon.isdigit():
+        print("\n  [!] Nomor telepon harus berupa angka!")
+        return
+
+    if len(no_telepon) < 10 or len(no_telepon) > 13:
+        print("\n  [!] Nomor telepon harus terdiri dari 10-13 digit!")
+        return
+
+    password = input("  Password          : ")
+
+    if len(password) < 5:
+        print("\n  [!] Password minimal 5 karakter!")
+        return
+
+    if any(huruf.isspace() for huruf in password):
+        print("\n  [!] Password tidak boleh mengandung spasi!")
+        return
+
+    # DATA ALAMAT PETANI
+    if role == "Petani":
+        print()
+        print("[ DATA ALAMAT ]")
+        print("-" * 55)
+
+        nama_jalan = input("  Nama jalan        : ").strip()
+        nomor_rumah = input("  Nomor rumah       : ").strip()
+        rt = input("  RT                : ").strip()
+        rw = input("  RW                : ").strip()
+        kelurahan = input("  Kelurahan         : ").strip().title()
+        kecamatan = input("  Kecamatan         : ").strip().title()
+        kota = input("  Kota              : ").strip().title()
+        kode_pos = input("  Kode pos          : ").strip()
+
+        if not nama_jalan:
+            print("\n  [!] Nama jalan tidak boleh kosong!")
+            return
+
+        if not kelurahan or not kecamatan or not kota:
+            print("\n  [!] Kelurahan, kecamatan, dan kota wajib diisi!")
+            return
+
+        if rt and not rt.isdigit():
+            print("\n  [!] RT harus berupa angka!")
+            return
+
+        if rw and not rw.isdigit():
+            print("\n  [!] RW harus berupa angka!")
+            return
+
+        if kode_pos and (not kode_pos.isdigit() or len(kode_pos) != 5):
+            print("\n  [!] Kode pos harus terdiri dari 5 digit!")
+            return
+
+    # KONEKSI DATABASE
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -145,7 +247,6 @@ def registrasi():
     try:
         if role == "Petani":
 
-            # Membuat ID petani berikutnya
             cursor.execute("""
                 SELECT COALESCE(MAX(id_petani), 0) + 1
                 FROM petani
@@ -155,41 +256,22 @@ def registrasi():
 
             query = """
                 INSERT INTO petani (
-                    id_petani,
-                    nama_petani,
-                    no_telepon,
-                    nama_jalan,
-                    nomor_rumah,
-                    rt,
-                    rw,
-                    kelurahan,
-                    kecamatan,
-                    kota,
-                    kode_pos,
-                    password
+                    id_petani, nama_petani, no_telepon,
+                    nama_jalan, nomor_rumah, rt, rw,
+                    kelurahan, kecamatan, kota, kode_pos, password
                 )
                 VALUES (%s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s)
             """
 
             cursor.execute(query, (
-                id_baru,
-                nama,
-                no_telepon,
-                nama_jalan,
-                nomor_rumah,
-                rt,
-                rw,
-                kelurahan,
-                kecamatan,
-                kota,
-                kode_pos,
-                password
+                id_baru, nama, no_telepon,
+                nama_jalan, nomor_rumah, rt, rw,
+                kelurahan, kecamatan, kota, kode_pos, password
             ))
 
         else:
 
-            # Membuat ID pembeli berikutnya
             cursor.execute("""
                 SELECT COALESCE(MAX(id_pembeli), 0) + 1
                 FROM pembeli
@@ -199,42 +281,73 @@ def registrasi():
 
             query = """
                 INSERT INTO pembeli (
-                    id_pembeli,
-                    nama_pembeli,
-                    no_telepon,
-                    password
+                    id_pembeli, nama_pembeli, no_telepon, password
                 )
                 VALUES (%s, %s, %s, %s)
             """
 
             cursor.execute(query, (
-                id_baru,
-                nama,
-                no_telepon,
-                password
+                id_baru, nama, no_telepon, password
             ))
 
         koneksi.commit()
 
-        print("\nRegistrasi berhasil!")
-        print("ID akun:", id_baru)
-        print("Role:", role)
-        print("Silakan login menggunakan akun yang sudah dibuat.")
+        clear()
 
-    except psycopg2.IntegrityError:
-        koneksi.rollback()
-        print("\nNomor telepon sudah terdaftar!")
+        print("=" * 55)
+        print("                    TANIFLOW")
+        print("=" * 55)
+        print()
+        print("             REGISTRASI BERHASIL!")
+        print("-" * 55)
+        print("  Akun berhasil dibuat.")
+        print()
+        print("  ID Akun       :", id_baru)
+        print("  Nama          :", nama)
+        print("  Role          :", role)
+        print("  No. Telepon   :", no_telepon)
+        print()
+        print("-" * 55)
+        print("  Silakan login menggunakan akun Anda.")
+        print("=" * 55)
 
-    except psycopg2.Error as error:
+    except psycopg2.IntegrityError as error:
         koneksi.rollback()
-        print("\nRegistrasi gagal!")
-        print(error)
+
+        print("\n" + "=" * 55)
+        print("                 REGISTRASI GAGAL")
+        print("-" * 55)
+
+        if error.pgcode == "23505":
+            print("  [!] Nomor telepon sudah terdaftar!")
+
+        elif error.pgcode == "23502":
+            print("  [!] Ada data wajib yang belum diisi!")
+
+        elif error.pgcode == "23503":
+            print("  [!] Data tidak sesuai dengan data terkait!")
+
+        else:
+            print("  [!] Data tidak memenuhi ketentuan database.")
+
+        print("=" * 55)
+
+    except psycopg2.Error:
+        koneksi.rollback()
+
+        print("\n" + "=" * 55)
+        print("                 REGISTRASI GAGAL")
+        print("-" * 55)
+        print("  [!] Terjadi kesalahan pada database.")
+        print("  Silakan coba kembali nanti.")
+        print("=" * 55)
 
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
+
         koneksi.close()
-
-
+        
 # =========================
 # MENU UTAMA
 # =========================
@@ -242,12 +355,19 @@ def registrasi():
 def main():
     while True:
         clear()
-        print("\n========== TANIFLOW ==========")
+        print("=" * 55)
+        print("                    TANIFLOW")
+        print("=" * 55)
+
+        # DATA AKUN
+        print("[ AKSES AKUN ]")
+        print("-" * 55)
+        
         print("1. Login")
         print("2. Registrasi")
         print("3. Keluar")
 
-        pilihan = input("Pilih menu: ")
+        pilihan = input("Pilih menu: ").strip()
 
         if pilihan == "1":
             login()
@@ -258,13 +378,17 @@ def main():
             input("\nTekan Enter untuk kembali ke menu utama...")
 
         elif pilihan == "3":
-            print("\nTerima kasih telah menggunakan TaniFlow!")
-            break
+            print("-" * 55)
+            print("Terima kasih telah menggunakan TaniFlow!")
+            print("-" * 55)
+            return
 
         else:
-            print("Pilihan tidak valid!")
-            input("\nTekan Enter untuk kembali ke menu utama...")
+            print("Pilihan tidak valid")
+            input("\nTekan Enter untuk kembali ke menu utama...")      
 
 
 # Menjalankan program
-main()
+while True:
+    main()
+    input("\nTekan Enter untuk memulai kembali TaniFlow...")

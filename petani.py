@@ -1,27 +1,74 @@
 
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear
+from bantuan import clear, jeda
 
 # =====================================
 # 1. MENGIRIM DATA HASIL PANEN
 # =====================================
 
+
 def kirim_pengajuan(id_petani):
     clear()
     print("\n========== PENGAJUAN HASIL PANEN ==========")
 
-    jumlah = input("Jumlah panen yang diajukan: ")
-    catatan = input("Catatan tambahan: ")
+    jumlah = input("Jumlah panen yang diajukan: ").strip()
+
+    if not jumlah:
+        print("\nJumlah panen tidak boleh kosong!")
+        jeda()
+        return
+
+    if not jumlah.isdigit():
+        print("\nJumlah panen harus berupa angka bulat!")
+        jeda()
+        return
+
+    jumlah = int(jumlah)
+
+    if not jumlah:
+        print("\nJumlah tidak boleh kosong")
+
+    if jumlah <= 0:
+        print("\nJumlah panen harus lebih dari 0")
+        jeda()
+        return
+
+    print("\nPilih satuan hasil panen:")
+    print("1. Kg")
+    print("2. Ikat")
+    print("3. Sisir")
+    print("4. Buah")
+
+    pilihan_satuan = input("Pilih satuan: ").strip()
+
+    satuan = {
+        "1": "Kg",
+        "2": "Ikat",
+        "3": "Sisir",
+        "4": "Buah"
+    }
+    if pilihan_satuan not in satuan:
+        print("\nPilihan satuan tidak valid atau belum dipilih!")
+        jeda()
+        return
+    
+    satuan_panen = satuan[pilihan_satuan]
+
+    catatan = input("Catatan tambahan (opsional): ").strip()
 
     koneksi = buka_koneksi()
 
     if koneksi is None:
+        print("\nGagal terhubung ke database!")
+        jeda()
         return
 
-    cursor = koneksi.cursor()
+    cursor = None
 
     try:
+        cursor = koneksi.cursor()
+
         cursor.execute("""
             SELECT COALESCE(MAX(id_pengajuan), 0) + 1
             FROM pengajuan_panen
@@ -34,19 +81,21 @@ def kirim_pengajuan(id_petani):
                 id_pengajuan,
                 tanggal_pengajuan,
                 jumlah_diajukan,
+                satuan,
                 status_pengajuan,
                 catatan,
                 petani_id_petani,
                 admin_id_admin
             )
             VALUES (
-                %s, CURRENT_DATE, %s, 'Menunggu',
+                %s, CURRENT_DATE, %s,  %s, 'Menunggu',
                 %s, %s, NULL
             )
         """, (
             id_baru,
             jumlah,
-            catatan,
+            satuan_panen,
+            catatan if catatan else None,
             id_petani
         ))
 
@@ -54,14 +103,21 @@ def kirim_pengajuan(id_petani):
 
         print("\nPengajuan hasil panen berhasil dikirim!")
         print("ID Pengajuan:", id_baru)
+        print("Jumlah diajukan:", jumlah, satuan_panen)
+        print("Status: Menunggu")
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal mengirim pengajuan:", error)
+        print("\nGagal mengirim pengajuan!")
+        print("Terjadi kesalahan pada database.")
 
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
         koneksi.close()
+
+    jeda()
+
 
 
 # =====================================
@@ -90,7 +146,7 @@ def lihat_hasil_panen(id_petani):
             JOIN produk p
                 ON h.produk_id_produk = p.id_produk
             WHERE pg.petani_id_petani = %s
-            ORDER BY h.tanggal_penerimaan DESC
+            ORDER BY h.tanggal_penerimaan ASC
         """, (id_petani,))
 
         data = cursor.fetchall()
@@ -115,6 +171,8 @@ def lihat_hasil_panen(id_petani):
         cursor.close()
         koneksi.close()
 
+    jeda()
+
 
 # =====================================
 # 3. MELIHAT RIWAYAT PENGAJUAN PANEN
@@ -138,7 +196,7 @@ def riwayat_pengajuan(id_petani):
                    catatan
             FROM pengajuan_panen
             WHERE petani_id_petani = %s
-            ORDER BY tanggal_pengajuan DESC
+            ORDER BY tanggal_pengajuan ASC
         """, (id_petani,))
 
         data = cursor.fetchall()
@@ -162,6 +220,8 @@ def riwayat_pengajuan(id_petani):
     finally:
         cursor.close()
         koneksi.close()
+
+    jeda()
 
 
 # =====================================
@@ -194,3 +254,5 @@ def menu_petani(id_petani):
 
         else:
             print("Pilihan tidak valid!")
+
+    jeda()

@@ -1,6 +1,6 @@
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear
+from bantuan import clear, jeda
 
 # =====================================
 # 1. DASHBOARD ADMIN
@@ -38,8 +38,8 @@ def dashboard():
         print("Jumlah Hasil Panen :", jumlah_hasil_panen)
         print("Jumlah Transaksi   :", jumlah_transaksi)
 
-    except psycopg2.Error as error:
-        print("Gagal menampilkan dashboard:", error)
+    except psycopg2.Error:
+        print("Gagal menampilkan dashboard")
 
     finally:
         cursor.close()
@@ -60,8 +60,10 @@ def lihat_petani(cursor):
     """)
 
     data = cursor.fetchall()
-
-    print("\n========== DATA PETANI ==========")
+    
+    print("=" * 55)
+    print("DATA PETANI")
+    print("=" * 55)
 
     if len(data) == 0:
         print("Belum ada data petani.")
@@ -82,20 +84,86 @@ def lihat_petani(cursor):
 
 def tambah_petani():
     clear()
-    print("\n========== TAMBAH PETANI ==========")
+    print("=" * 55)
+    print("TAMBAH PETANI")
+    print("=" * 55)
 
-    nama = input("Nama petani: ")
-    no_telepon = input("Nomor telepon: ")
-    nama_jalan = input("Nama jalan: ")
-    nomor_rumah = input("Nomor rumah: ")
-    rt = input("RT: ")
-    rw = input("RW: ")
-    kelurahan = input("Kelurahan: ")
-    kecamatan = input("Kecamatan: ")
-    kota = input("Kota: ")
-    kode_pos = input("Kode pos: ")
-    password = input("Password: ")
+    nama = input("  Nama petani: ").strip().title()
+    if not nama:
+        print("\n  [!] Nama tidak boleh kosong!")
+        return
+    if not all(huruf.isalpha() or huruf.isspace() for huruf in nama):
+        print("\n  [!] Nama hanya boleh mengandung huruf dan spasi!")
+        return
 
+    no_telepon = input("  Nomor telepon     : ").strip()
+    if not no_telepon:
+        print("\n  [!] Nomor telepon tidak boleh kosong!")
+        return
+    if not no_telepon.isdigit():
+        print("\n  [!] Nomor telepon harus berupa angka!")
+        return
+    if len(no_telepon) < 10 or len(no_telepon) > 13:
+            print("\n  [!] Nomor telepon harus terdiri dari 10-13 digit!")
+            return
+
+    password = input("  Password          : ")
+    if len(password) < 5:
+        print("\n  [!] Password minimal 5 karakter!")
+        return
+    if any(huruf.isspace() for huruf in password):
+        print("\n  [!] Password tidak boleh mengandung spasi!")
+        return
+    
+    print("\n-Alamat")
+    nama_jalan = input("  Nama jalan        : ").strip()
+    nomor_rumah = input("  Nomor rumah       : ").strip()
+    rt = input("  RT                : ").strip()
+    rw = input("  RW                : ").strip()
+    kelurahan = input("  Kelurahan         : ").strip().title()
+    kecamatan = input("  Kecamatan         : ").strip().title()
+    kota = input("  Kota              : ").strip().title()
+    kode_pos = input("  Kode pos          : ").strip()
+
+    if not nama_jalan:
+        print("\n  [!] Nama jalan tidak boleh kosong!")
+        return
+    if not kelurahan or not kecamatan or not kota:
+        print("\n  [!] Kelurahan, kecamatan, dan kota wajib diisi!")
+        return
+    if rt and not rt.isdigit():
+        print("\n  [!] RT harus berupa angka!")
+        return
+    if rw and not rw.isdigit():
+        print("\n  [!] RW harus berupa angka!")
+        return
+    if kode_pos and (not kode_pos.isdigit() or len(kode_pos) != 5):
+        print("\n  [!] Kode pos harus terdiri dari 5 digit!")
+        return
+
+    clear()
+
+    print("=" * 55)
+    print("Konfirmasi tambah data petani")
+    print("=" * 55)
+
+    print("\nApakah Anda yakin ingin menambah petani?")
+    print("1. [Ya]")
+    print("2. [Tidak]")
+
+    konfirmasi = input("Pilih konfirmasi (1/2): ").strip()
+
+    if konfirmasi == "1":
+        print("\nData akan disimpan.")
+
+    elif konfirmasi == "2":
+        print("\nPenambahan data petani dibatalkan.")
+        return
+
+    else:
+        print("\n[!] Input tidak valid!")
+        return
+        
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -130,9 +198,9 @@ def tambah_petani():
         koneksi.commit()
         print("Data petani berhasil ditambahkan!")
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal menambahkan petani:", error)
+        print("Gagal menambahkan petani")
 
     finally:
         cursor.close()
@@ -152,31 +220,82 @@ def ubah_petani():
         lihat_petani(cursor)
 
         id_petani = input("\nMasukkan ID petani yang ingin diubah: ")
+        if not id_petani:
+            print("\n  [!] id_petani tidak boleh kosong!")
+            return
+        if id_petani.isdigit():
+            cursor.execute("""
+                SELECT id_petani
+                FROM petani
+                WHERE id_petani = %s
+            """, (id_petani,))
 
-        cursor.execute("""
-            SELECT id_petani
-            FROM petani
-            WHERE id_petani = %s
-        """, (id_petani,))
+            if cursor.fetchone() is None:
+                print("\n  [!] ID petani tidak ditemukan!")
+                return
 
-        if cursor.fetchone() is None:
-            print("ID petani tidak ditemukan!")
+        else:
+            print("\n  [!] Input tidak valid!")
             return
 
         print("\nMasukkan data petani yang baru.")
 
-        nama = input("Nama petani: ")
-        no_telepon = input("Nomor telepon: ")
-        nama_jalan = input("Nama jalan: ")
-        nomor_rumah = input("Nomor rumah: ")
-        rt = input("RT: ")
-        rw = input("RW: ")
-        kelurahan = input("Kelurahan: ")
-        kecamatan = input("Kecamatan: ")
-        kota = input("Kota: ")
-        kode_pos = input("Kode pos: ")
-        password = input("Password baru: ")
-
+        nama = input("  Nama petani: ").strip().title()
+        if not nama:
+            print("\n  [!] Nama tidak boleh kosong!")
+            return
+        if not all(huruf.isalpha() or huruf.isspace() for huruf in nama):
+            print("\n  [!] Nama hanya boleh mengandung huruf dan spasi!")
+            return
+        if not no_telepon.isdigit():
+            print("\n  [!] Nomor telepon harus berupa angka!")
+            return
+    
+        no_telepon = input("  Nomor telepon     : ").strip()
+        if not no_telepon:
+            print("\n  [!] Nomor telepon tidak boleh kosong!")
+            return
+        if not no_telepon.isdigit():
+            print("\n  [!] Nomor telepon harus berupa angka!")
+            return
+        if len(no_telepon) < 10 or len(no_telepon) > 13:
+                print("\n  [!] Nomor telepon harus terdiri dari 10-13 digit!")
+                return
+    
+        password = input("  Password          : ")
+        if len(password) < 5:
+            print("\n  [!] Password minimal 5 karakter!")
+            return
+        if any(huruf.isspace() for huruf in password):
+            print("\n  [!] Password tidak boleh mengandung spasi!")
+            return
+        
+        print("\n-Alamat")
+        nama_jalan = input("  Nama jalan        : ").strip()
+        nomor_rumah = input("  Nomor rumah       : ").strip()
+        rt = input("  RT                : ").strip()
+        rw = input("  RW                : ").strip()
+        kelurahan = input("  Kelurahan         : ").strip().title()
+        kecamatan = input("  Kecamatan         : ").strip().title()
+        kota = input("  Kota              : ").strip().title()
+        kode_pos = input("  Kode pos          : ").strip()
+    
+        if not nama_jalan:
+            print("\n  [!] Nama jalan tidak boleh kosong!")
+            return
+        if not kelurahan or not kecamatan or not kota:
+            print("\n  [!] Kelurahan, kecamatan, dan kota wajib diisi!")
+            return
+        if rt and not rt.isdigit():
+            print("\n  [!] RT harus berupa angka!")
+            return
+        if rw and not rw.isdigit():
+            print("\n  [!] RW harus berupa angka!")
+            return
+        if kode_pos and (not kode_pos.isdigit() or len(kode_pos) != 5):
+            print("\n  [!] Kode pos harus terdiri dari 5 digit!")
+            return
+        
         cursor.execute("""
             UPDATE petani
             SET nama_petani = %s,
@@ -200,9 +319,9 @@ def ubah_petani():
         koneksi.commit()
         print("Data petani berhasil diubah!")
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal mengubah data petani:", error)
+        print("Gagal mengubah data petani")
 
     finally:
         cursor.close()
@@ -222,25 +341,32 @@ def hapus_petani():
         lihat_petani(cursor)
 
         id_petani = input("\nMasukkan ID petani yang ingin dihapus: ")
-
-        cursor.execute("""
-            DELETE FROM petani
-            WHERE id_petani = %s
-        """, (id_petani,))
-
-        if cursor.rowcount > 0:
-            koneksi.commit()
-            print("Data petani berhasil dihapus!")
+        if not id_petani:
+            print("\n  [!] id_petani tidak boleh kosong!")
+            return
+        if id_petani.isdigit():
+            cursor.execute("""
+                DELETE FROM petani
+                WHERE id_petani = %s
+            """, (id_petani,))
+    
+            if cursor.rowcount > 0:
+                koneksi.commit()
+                print("Data petani berhasil dihapus!")
+            else:
+                koneksi.rollback()
+                print("\n  [!] ID petani tidak ditemukan!")
+                return
 
         else:
             koneksi.rollback()
-            print("ID petani tidak ditemukan!")
+            print("\n  [!] Input tidak valid!")
+            return
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
         print("Data petani tidak dapat dihapus.")
         print("Petani mungkin masih memiliki data pengajuan panen.")
-        print(error)
 
     finally:
         cursor.close()
@@ -251,25 +377,29 @@ def kelola_petani():
     while True:
         clear()
         print("\n========== KELOLA DATA PETANI ==========")
-        print("1. Tambah Petani")
-        print("2. Lihat Petani")
+        print("1. Lihat Petan ")
+        print("2. Tambah Petani")
         print("3. Ubah Petani")
         print("4. Hapus Petani")
         print("5. Kembali")
 
         pilihan = input("Pilih menu: ")
 
-        if pilihan == "1":
-            tambah_petani()
+        if not pilihan:
+            print("Pilihan tidak boleh kosong.")
+            continue
 
-        elif pilihan == "2":
+        elif pilihan == "1":
             koneksi = buka_koneksi()
-
+            
             if koneksi is not None:
                 cursor = koneksi.cursor()
                 lihat_petani(cursor)
                 cursor.close()
                 koneksi.close()
+
+        elif pilihan == "2":
+            tambah_petani()
 
         elif pilihan == "3":
             ubah_petani()
@@ -282,6 +412,8 @@ def kelola_petani():
 
         else:
             print("Pilihan tidak valid!")
+
+        jeda()
 
 
 # =====================================
@@ -324,8 +456,8 @@ def lihat_produk():
                 print("Harga     :", produk[4])
                 print("Stok      :", produk[5])
 
-    except psycopg2.Error as error:
-        print("Gagal menampilkan produk:", error)
+    except psycopg2.Error:
+        print("Gagal menampilkan produk:")
 
     finally:
         cursor.close()
@@ -337,31 +469,25 @@ def lihat_produk():
 # =====================================
 
 def pilih_kategori(cursor):
-    clear()
     cursor.execute("""
         SELECT id_kategori, nama_kategori
         FROM kategori_produk
         ORDER BY id_kategori
     """)
 
-    data = cursor.fetchall()
+    data_kategori = cursor.fetchall()
 
-    print("\n========== PILIH KATEGORI ==========")
+    print("\n========== DAFTAR KATEGORI ==========")
 
-    for kategori in data:
-        print(kategori[0], "-", kategori[1])
+    for kategori in data_kategori:
+        print(f"{kategori[0]}. {kategori[1]}")
 
-    return data
+    return data_kategori
 
 
 def tambah_produk(id_admin):
     clear()
     print("\n========== TAMBAH PRODUK ==========")
-
-    nama = input("Nama produk: ")
-    satuan = input("Satuan produk: ")
-    harga = input("Harga jual: ")
-    stok = input("Stok awal: ")
 
     koneksi = buka_koneksi()
 
@@ -377,8 +503,74 @@ def tambah_produk(id_admin):
             print("Belum ada kategori produk!")
             return
 
-        id_kategori = input("Masukkan ID kategori: ")
+        id_kategori = input("\nPilih ID kategori: ").strip()
 
+        if not id_kategori:
+            print("ID kategori tidak boleh kosong.")
+            return
+        if id_kategori.isdigit():
+            id_kategori = int(id_kategori)
+
+            if not any(kategori[0] == id_kategori for kategori in data_kategori):
+                print("\n[!] ID kategori tidak ditemukan!")
+                return
+        
+        else:
+            print("\n[!] Input tidak valid!")
+            return
+
+        # NAMA PRODUK
+        nama = input("Nama produk: ").strip().title()
+
+        if not nama:
+            print("Nama produk tidak boleh kosong.")
+            return
+        
+        if not nama or not any(huruf.isalnum() for huruf in nama):
+            print("\n[!] Input tidak valid!")
+            return
+
+        # PILIH SATUAN
+        print("Pilih satuan produk:")
+        print("1. Kg")
+        print("2. Sisir")
+        print("3. Ikat")
+        print("4. Buah")
+        print("5. Karung")
+
+        pilihan = input("Pilih satuan (1-6): ").strip()
+
+        if not pilihan:
+            print("ID kategori tidak boleh kosong.")
+        if pilihan == "1":
+            satuan = "Kg"
+        elif pilihan == "2":
+            satuan = "Sisir"
+        elif pilihan == "3":
+            satuan = "Ikat"
+        elif pilihan == "5":
+            satuan = "Buah"
+        elif pilihan == "5":
+            satuan = "Karung"
+        else:
+            print("\n[!] Input tidak valid!")
+            return
+
+        # HARGA JUAL
+        harga = input("Harga jual: ").strip()
+
+        if not harga.isdigit() or int(harga) <= 0:
+            print("\n[!] Input harga tidak valid!")
+            return
+
+        # STOK AWAL
+        stok = input("Stok awal: ").strip()
+
+        if not stok.isdigit():
+            print("\n[!] Input stok tidak valid!")
+            return
+
+        # MEMBUAT ID PRODUK
         cursor.execute("""
             SELECT COALESCE(MAX(id_produk), 0) + 1
             FROM produk
@@ -386,6 +578,7 @@ def tambah_produk(id_admin):
 
         id_baru = cursor.fetchone()[0]
 
+        # MENYIMPAN PRODUK
         cursor.execute("""
             INSERT INTO produk (
                 id_produk, nama_produk, satuan,
@@ -394,24 +587,28 @@ def tambah_produk(id_admin):
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
-            id_baru, nama, satuan, harga,
-            stok, id_admin, id_kategori
+            id_baru, nama, satuan, int(harga),
+            int(stok), id_admin, id_kategori
         ))
 
         koneksi.commit()
-        print("Produk berhasil ditambahkan!")
+        print("\nProduk berhasil ditambahkan!")
+        jeda()
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal menambahkan produk:", error)
+        print("\n[!] Gagal menambahkan produk!")
+        jeda()
 
     finally:
         cursor.close()
         koneksi.close()
 
 
-def ubah_produk():
+def ubah_produk(id_admin):
     clear()
+    print("\n========== UBAH PRODUK ==========")
+
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -420,68 +617,138 @@ def ubah_produk():
     cursor = koneksi.cursor()
 
     try:
-        cursor.execute("""
-            SELECT id_produk, nama_produk
-            FROM produk
-            ORDER BY id_produk
-        """)
+        # MENAMPILKAN DATA PRODUK
+        lihat_produk(cursor)
 
-        data = cursor.fetchall()
+        id_produk = input("\nMasukkan ID produk yang ingin diubah: ").strip()
 
-        print("\n========== DATA PRODUK ==========")
+        if not id_produk:
+            print("ID produk tidak boleh kosong.")
+            return
+        if id_produk.isdigit():
+            cursor.execute("""
+                SELECT id_produk
+                FROM produk
+                WHERE id_produk = %s
+            """, (id_produk,))
 
-        for produk in data:
-            print(produk[0], "-", produk[1])
-
-        id_produk = input("\nMasukkan ID produk: ")
-
-        cursor.execute("""
-            SELECT id_produk
-            FROM produk
-            WHERE id_produk = %s
-        """, (id_produk,))
-
-        if cursor.fetchone() is None:
-            print("ID produk tidak ditemukan!")
+            if cursor.fetchone() is None:
+                print("\n[!] ID produk tidak ditemukan!")
+                return
+        else:
+            print("\n[!] Input tidak valid!")
             return
 
-        nama = input("Nama produk baru: ")
-        satuan = input("Satuan baru: ")
-        harga = input("Harga jual baru: ")
-        stok = input("Stok baru: ")
-
+        # MENAMPILKAN KATEGORI
         data_kategori = pilih_kategori(cursor)
 
         if len(data_kategori) == 0:
             print("Belum ada kategori produk!")
             return
 
-        id_kategori = input("Masukkan ID kategori baru: ")
+        print("\nMasukkan data produk yang baru.")
 
+        # NAMA PRODUK
+        nama = input("Nama produk: ").strip().title()
+
+        if not nama:
+                    print("nama tidak boleh kosong.")
+                    return
+        if not nama or not any(huruf.isalnum() for huruf in nama):
+            print("\n[!] Input tidak valid!")
+            return
+
+        # PILIH SATUAN
+        print("\nPilih satuan produk:")
+        print("1. Kg")
+        print("2. sisir")
+        print("3. Ikat")
+        print("4. Buah")
+        print("5. Karung")
+
+        pilihan = input("Pilih satuan (1-5): ").strip()
+
+        if not pilihan:
+            print("Pilihan tidak boleh kosong.")
+        if pilihan == "1":
+            satuan = "Kg"
+        elif pilihan == "2":
+            satuan = "Sisir"
+        elif pilihan == "3":
+            satuan = "Ikat"
+        elif pilihan == "4":
+            satuan = "Buah"
+        elif pilihan == "5":
+            satuan = "Karung"
+        else:
+            print("\n[!] Input tidak valid!")
+            return
+
+        # HARGA JUAL
+        harga = input("Harga jual: ").strip()
+
+        if not harga:
+            print("harga tidak boleh kosong.")
+            return
+        if not harga.isdigit() or int(harga) <= 0:
+            print("\n[!] Input harga tidak valid!")
+            return
+
+        # STOK
+        stok = input("Stok produk: ").strip()
+
+        if not stok:
+            print("stok tidak boleh kosong")
+            return
+        if not stok.isdigit():
+            print("\n[!] Input stok tidak valid!")
+            return
+
+        # ID KATEGORI
+        id_kategori = input("Masukkan ID kategori: ").strip()
+
+        if not id_kategori:
+            print("id_kategori tidak boleh kosong.")
+            return
+
+        if id_kategori.isdigit():
+            id_kategori = int(id_kategori)
+
+            if not any(kategori[0] == id_kategori for kategori in data_kategori):
+                print("\n[!] ID kategori tidak ditemukan!")
+                return
+
+        else:
+            print("\n[!] Input tidak valid!")
+            return
+
+        # UPDATE PRODUK
         cursor.execute("""
             UPDATE produk
             SET nama_produk = %s,
                 satuan = %s,
                 harga_jual = %s,
                 stok = %s,
+                admin_id_admin = %s,
                 kategori_produk_id_kategori = %s
             WHERE id_produk = %s
         """, (
-            nama, satuan, harga, stok,
-            id_kategori, id_produk
+            nama, satuan, int(harga), int(stok),
+            id_admin, id_kategori, id_produk
         ))
 
         koneksi.commit()
-        print("Produk berhasil diubah!")
+        print("\nProduk berhasil diubah!")
+        jeda()
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal mengubah produk:", error)
+        print("\n[!] Data produk tidak dapat diubah!")
+        jeda()
 
     finally:
         cursor.close()
         koneksi.close()
-
 
 def hapus_produk():
     clear()
@@ -506,30 +773,38 @@ def hapus_produk():
         for produk in data:
             print(produk[0], "-", produk[1])
 
-        id_produk = input("\nMasukkan ID produk yang ingin dihapus: ")
+        id_produk = input("\nMasukkan ID produk yang ingin dihapus: ").strip()
 
-        cursor.execute("""
-            DELETE FROM produk
-            WHERE id_produk = %s
-        """, (id_produk,))
+        if not id_produk:
+            print("ID produk tidak boleh kosong.")
+            return
 
-        if cursor.rowcount > 0:
-            koneksi.commit()
-            print("Produk berhasil dihapus!")
+        if id_produk.isdigit():
+            cursor.execute("""
+                DELETE FROM produk
+                WHERE id_produk = %s
+            """, (id_produk,))
+
+            if cursor.rowcount > 0:
+                koneksi.commit()
+                print("Produk berhasil dihapus!")
+
+            else:
+                koneksi.rollback()
+                print("ID produk tidak ditemukan!")
 
         else:
             koneksi.rollback()
-            print("ID produk tidak ditemukan!")
+            print("[!] Input tidak valid!")
+            return
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
         print("Produk tidak dapat dihapus karena mungkin masih digunakan.")
-        print(error)
 
     finally:
         cursor.close()
         koneksi.close()
-
 
 def menu_produk(id_admin):
     while True:
@@ -546,7 +821,7 @@ def menu_produk(id_admin):
             tambah_produk(id_admin)
 
         elif pilihan == "2":
-            ubah_produk()
+            ubah_produk(id_admin)
 
         elif pilihan == "3":
             hapus_produk()
@@ -556,6 +831,7 @@ def menu_produk(id_admin):
 
         else:
             print("Pilihan tidak valid!")
+            jeda()
 
 
 # =====================================
@@ -593,8 +869,8 @@ def lihat_stok():
             else:
                 print("Status    : Tersedia")
 
-    except psycopg2.Error as error:
-        print("Gagal memeriksa stok:", error)
+    except psycopg2.Error:
+        print("Gagal memeriksa stok")
 
     finally:
         cursor.close()
@@ -629,7 +905,7 @@ def lihat_hasil_panen():
                 ON pg.petani_id_petani = pet.id_petani
             JOIN produk p
                 ON h.produk_id_produk = p.id_produk
-            ORDER BY h.tanggal_penerimaan DESC
+            ORDER BY h.tanggal_penerimaan ASC
         """)
 
         data = cursor.fetchall()
@@ -648,8 +924,8 @@ def lihat_hasil_panen():
                 print("Jumlah Panen   :", hasil[4])
                 print("Harga Beli     :", hasil[5])
 
-    except psycopg2.Error as error:
-        print("Gagal menampilkan hasil panen:", error)
+    except psycopg2.Error:
+        print("Gagal menampilkan hasil panen")
 
     finally:
         cursor.close()
@@ -778,9 +1054,9 @@ def terima_hasil_panen(id_admin):
         print("Jumlah pengajuan:", jumlah_diajukan)
         print("ID hasil panen:", id_hasil)
 
-    except psycopg2.Error as error:
+    except psycopg2.Error:
         koneksi.rollback()
-        print("Gagal mencatat penerimaan panen:", error)
+        print("Gagal mencatat penerimaan panen")
 
     finally:
         cursor.close()
@@ -810,7 +1086,7 @@ def lihat_transaksi():
             FROM transaksi t
             JOIN pembeli p
                 ON t.pembeli_id_pembeli = p.id_pembeli
-            ORDER BY t.tanggal_transaksi DESC
+            ORDER BY t.tanggal_transaksi ASC
         """)
 
         data = cursor.fetchall()
@@ -936,15 +1212,25 @@ def konfirmasi_pembayaran(id_admin):
             return
 
         # Meminta konfirmasi Admin
-        konfirmasi = input(
-            "\nApakah pembayaran sudah diterima? (y/n): "
-        )
 
-        if konfirmasi.lower() != "y":
+        konfirmasi = input("\nApakah pembayaran sudah diterima? (y/n): ").strip().lower()
+
+        if not konfirmasi:
+            print("[!] Konfirmasi tidak boleh kosong.")
+            return
+
+        if konfirmasi == "y":
+            pass
+
+        elif konfirmasi == "n":
             koneksi.rollback()
             print("Konfirmasi pembayaran dibatalkan.")
             return
 
+        else:
+            print("[!] Pilihan tidak valid! Mohon pilih y/n.")
+            return
+    
         # Mengurangi stok produk
         for barang in detail:
             cursor.execute("""
@@ -998,7 +1284,7 @@ def laporan_penjualan():
                    COALESCE(SUM(total_harga), 0)
             FROM transaksi
             GROUP BY DATE(tanggal_transaksi)
-            ORDER BY DATE(tanggal_transaksi) DESC
+            ORDER BY DATE(tanggal_transaksi) ASC
         """)
 
         data = cursor.fetchall()
@@ -1024,8 +1310,8 @@ def laporan_penjualan():
             print("Jumlah Transaksi :", total_transaksi)
             print("Total Penjualan  :", total_penjualan)
 
-    except psycopg2.Error as error:
-        print("Gagal menampilkan laporan:", error)
+    except psycopg2.Error:
+        print("Gagal menampilkan laporan")
 
     finally:
         cursor.close()
@@ -1090,3 +1376,5 @@ def menu_admin(id_admin):
 
         else:
             print("Pilihan tidak valid!")
+
+        jeda()
