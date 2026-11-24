@@ -374,10 +374,11 @@ def hapus_petani():
 
 
 def kelola_petani():
+    clear()
     while True:
         clear()
         print("\n========== KELOLA DATA PETANI ==========")
-        print("1. Lihat Petan ")
+        print("1. Lihat Petani")
         print("2. Tambah Petani")
         print("3. Ubah Petani")
         print("4. Hapus Petani")
