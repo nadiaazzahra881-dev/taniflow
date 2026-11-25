@@ -31,6 +31,7 @@ def kirim_pengajuan(id_petani):
             FROM produk p
             JOIN kategori_produk k
                 ON p.kategori_produk_id_kategori = k.id_kategori
+            WHERE p.harga_jual > 0
             ORDER BY p.id_produk
         """)
 

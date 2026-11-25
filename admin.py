@@ -450,56 +450,60 @@ def kelola_petani():
 # 3. MELIHAT PRODUK
 # =====================================
 
-def lihat_produk():
+def lihat_produk(tunggu=True):
     clear()
+    print("=========== KELOLA DATA PRODUK ==========")
     koneksi = buka_koneksi()
-
+   
     if koneksi is None:
-        return
-
+           return
+   
     cursor = koneksi.cursor()
-
+   
     try:
         cursor.execute("""
             SELECT p.id_produk, p.nama_produk,
-                   k.nama_kategori, p.satuan,
-                   p.harga_jual, p.stok
+                    k.nama_kategori, p.harga_jual,
+                    p.satuan
             FROM produk p
             JOIN kategori_produk k
-            ON p.kategori_produk_id_kategori = k.id_kategori
+                ON p.kategori_produk_id_kategori = k.id_kategori
             ORDER BY p.id_produk
         """)
 
         data = cursor.fetchall()
 
-        print("\n========== DATA PRODUK ==========")
-
-        if len(data) == 0:
+        if not data:
             print("Belum ada produk.")
 
         else:
-            for produk in data:
-                print("\nID Produk :", produk[0])
-                print("Nama      :", produk[1])
-                print("Kategori  :", produk[2])
-                print("Satuan    :", produk[3])
-                print("Harga     :", produk[4])
-                print("Stok      :", produk[5])
+            print("+----+----------------------+----------------+--------------+--------+")
+            print("| ID | Nama Produk          | Kategori       | Harga        | Satuan |")
+            print("+----+----------------------+----------------+--------------++-------+")
 
-    except psycopg2.Error:
-        print("Gagal menampilkan produk:")
-        jeda()
+            for produk in data:
+                harga = f"Rp {int(produk[3]):,}".replace(",", ".")
+
+                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | {harga:<12} | {produk[4]:<6} |")
+            
+            print("+----+----------------------+----------------+--------------+---------+")
+
+            if tunggu:
+                jeda()
+
+    except psycopg2.Error as error:
+        print("Gagal menampilkan produk:", error)
 
     finally:
         cursor.close()
         koneksi.close()
 
-
 # =====================================
 # 4. MENGELOLA DATA PRODUK
 # =====================================
 
-def pilih_kategori(cursor, tunggu=True, judul="DATA PETANI"):
+def pilih_kategori(cursor, judul="DATA PETANI"):
+    clear()
     print("=" * 55)
     print(judul)
     print("=" * 55)
@@ -846,6 +850,7 @@ def hapus_produk():
         koneksi.close()
 
 def menu_produk(id_admin):
+    clear()
     while True:
         clear()
         print("\n========== KELOLA PRODUK ==========")
@@ -877,8 +882,10 @@ def menu_produk(id_admin):
 # 5. MEMERIKSA KETERSEDIAAN STOK
 # =====================================
 
-def lihat_stok():
+def lihat_stok(tunggu=True):
     clear()
+    print("\n========== STOK PRODUK ==========")
+
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -888,28 +895,44 @@ def lihat_stok():
 
     try:
         cursor.execute("""
-            SELECT id_produk, nama_produk, satuan, stok
-            FROM produk
-            ORDER BY id_produk ASC
+            SELECT p.id_produk, p.nama_produk,
+                   k.nama_kategori, p.stok, p.satuan
+            FROM produk p
+            JOIN kategori_produk k
+                ON p.kategori_produk_id_kategori = k.id_kategori
+            ORDER BY p.id_produk
         """)
 
         data = cursor.fetchall()
 
-        print("\n========== KETERSEDIAAN STOK ==========")
+        if not data:
+            print("Belum ada produk.")
+        else:
+            print("+----+----------------------+----------------+----------+--------+---------------+")
+            print("| ID | Nama Produk          | Kategori       | Stok     | Satuan | Keterangan    |")
+            print("+----+----------------------+----------------+----------+--------+---------------+")
 
-        for produk in data:
-            print("\nID Produk :", produk[0])
-            print("Nama      :", produk[1])
-            print("Satuan    :", produk[2])
-            print("Stok      :", produk[3])
+            for produk in data:
+                jumlah_stok = float(produk[3])
+                stok = f"{jumlah_stok:g}"
 
-            if produk[3] <= 0:
-                print("Status    : Stok habis")
-            else:
-                print("Status    : Tersedia")
+                if jumlah_stok <= 0:
+                    keterangan = "Stok Habis"
+                elif jumlah_stok <= 10:
+                    keterangan = "Menipis"
+                else:
+                    keterangan = "Tersedia"
 
-    except psycopg2.Error:
-        print("Gagal memeriksa stok")
+                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | {stok:<8} | {produk[4]:<6} | {keterangan:<13} |")
+
+            
+        print("+----+----------------------+----------------+--------------+----------+---------+")
+
+        if tunggu:
+            jeda()
+
+    except psycopg2.Error as error:
+        print("Gagal menampilkan produk:", error)
 
     finally:
         cursor.close()
@@ -1159,8 +1182,6 @@ def setujui_pengajuan(id_admin):
 
         koneksi.close()
 
-    jeda()
-
 
 
 # =====================================
@@ -1281,14 +1302,15 @@ def terima_hasil_panen(id_admin):
         """, (id_pengajuan,))
 
         # Memperbarui harga beli berdasarkan harga jual produk
-        cursor.execute("""
-            UPDATE hasil_panen
-            SET harga_beli = %s
-            WHERE id_hasil = %s
-        """, (
-            produk[5],
-            produk[0]
-        ))
+        for produk in daftar_produk:
+            cursor.execute("""
+                UPDATE hasil_panen
+                SET harga_beli = %s
+                WHERE id_hasil = %s
+            """, (
+                produk[5],
+                produk[0]
+            ))
 
         # Menambahkan jumlah panen ke stok
         cursor.execute("""

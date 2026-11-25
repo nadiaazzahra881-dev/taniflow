@@ -6,7 +6,7 @@ from bantuan import clear,jeda
 # 1. MELIHAT PRODUK
 # ==========================================
 
-def lihat_produk():
+def lihat_produk(tunggu=True):
     print("\n========== DAFTAR PRODUK ==========")
 
     koneksi = buka_koneksi()
@@ -20,10 +20,11 @@ def lihat_produk():
         cursor.execute("""
             SELECT p.id_produk, p.nama_produk,
                    k.nama_kategori, p.harga_jual,
-                   p.stok, p.satuan
+                   p.satuan
             FROM produk p
             JOIN kategori_produk k
                 ON p.kategori_produk_id_kategori = k.id_kategori
+            WHERE p.harga_jual > 0
             ORDER BY p.id_produk
         """)
 
@@ -33,21 +34,19 @@ def lihat_produk():
             print("Belum ada produk.")
 
         else:
-            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
-            print("| ID | Nama Produk          | Kategori       | Harga        | Stok     | Satuan | Keterangan    |")
-            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
+            print("+----+----------------------+----------------+--------------+--------+")
+            print("| ID | Nama Produk          | Kategori       | Harga        | Satuan |")
+            print("+----+----------------------+----------------+--------------++-------+")
 
             for produk in data:
-                if produk[4] > 0:
-                    keterangan = "Tersedia"
-                else:
-                    keterangan = "Stok Habis"
+                harga = f"Rp {int(produk[3]):,}".replace(",", ".")
 
-                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | Rp {produk[3]:<9} | {produk[4]:<8} | {produk[5]:<6} | {keterangan:<13} |")
+                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | {harga:<12} | {produk[4]:<6} |")
+            
+            print("+----+----------------------+----------------+--------------+---------+")
 
-            print("+----+----------------------+----------------+--------------+----------+--------+---------------+")
-
-        jeda()
+        if tunggu:
+            jeda()
 
     except psycopg2.Error as error:
         print("Gagal menampilkan produk:", error)
@@ -61,150 +60,288 @@ def lihat_produk():
 # 2. MEMILIH PRODUK DAN MEMBUAT TRANSAKSI
 # ==========================================
 
+
+def tampilkan_keranjang(keranjang):
+    print("\n========== KERANJANG BELANJA ==========")
+
+    if len(keranjang) == 0:
+        print("Keranjang masih kosong.")
+        return 0
+
+    total = 0
+
+    for i, item in enumerate(keranjang, start=1):
+        subtotal = item["harga"] * item["jumlah"]
+        total += subtotal
+
+        print(
+            f"{i}. {item['nama']} | "
+            f"{item['jumlah']:g} {item['satuan']} x "
+            f"Rp {item['harga']:,.0f} = Rp {subtotal:,.0f}"
+        )
+
+    print("-" * 45)
+    print(f"Total Harga : Rp {total:,.0f}")
+
+    return total
+
+
 def beli_produk(id_pembeli):
-    print("\n========== PEMBELIAN PRODUK ==========")
-
-    lihat_produk()
-
-    id_produk = input("\nMasukkan ID produk yang ingin dibeli: ")
-
-    try:
-        jumlah = float(input("Masukkan jumlah pembelian: "))
-    
-        if jumlah <= 0:
-            print("Jumlah pembelian harus lebih dari 0.")
-            jeda()
-
-    except ValueError:
-        print("Jumlah harus berupa angka.")
-        jeda()
-
     koneksi = buka_koneksi()
 
     if koneksi is None:
         return
 
     cursor = koneksi.cursor()
+    keranjang = []
 
     try:
-        cursor.execute("""
-            SELECT nama_produk, harga_jual, stok
-            FROM produk
-            WHERE id_produk = %s
-        """, (id_produk,))
+        while True:
+            clear()
+            print("\n========== PEMBELIAN PRODUK ==========")
 
-        produk = cursor.fetchone()
+            total_harga = tampilkan_keranjang(keranjang)
 
-        if produk is None:
-            print("Produk tidak ditemukan.")
-            return
+            print("\n1. Tambah produk")
+            print("2. Hapus produk dari keranjang")
+            print("3. Buat transaksi")
+            print("0. Batal")
 
-        nama_produk = produk[0]
-        harga = float(produk[1])
-        stok = float(produk[2])
+            menu = input("\nPilih menu: ").strip()
 
-        if stok <= 0:
-            print("Maaf, stok produk sedang habis.")
-            return
+            # ---------- TAMBAH PRODUK ----------
+            if menu == "1":
+                clear()
+                lihat_produk(False)
 
-        if jumlah > stok:
-            print("Jumlah pembelian melebihi stok tersedia.")
-            print("Stok tersedia:", stok)
-            return
+                id_produk = input(
+                    "\nMasukkan ID produk (0 = kembali): "
+                ).strip()
 
-        total_harga = harga * jumlah
+                if id_produk == "0":
+                    continue
 
-        print("\n========== RINCIAN PEMBELIAN ==========")
-        print("Nama Produk :", nama_produk)
-        print("Harga       : Rp", harga)
-        print("Jumlah      :", jumlah)
-        print("Total Harga : Rp", total_harga)
+                if not id_produk.isdigit():
+                    print("\nID produk harus berupa angka!")
+                    jeda()
+                    continue
 
-        konfirmasi = input("\nBuat transaksi ini? (y/n): ")
+                id_produk = int(id_produk)
 
-        if konfirmasi.lower() != "y":
-            print("Pembelian dibatalkan.")
-            return
+                cursor.execute("""
+                    SELECT nama_produk, harga_jual, stok, satuan
+                    FROM produk
+                    WHERE id_produk = %s  AND harga_jual > 0
+                """, (id_produk,))
 
-         # Mengambil ID Admin
-        cursor.execute("""
-            SELECT id_admin
-            FROM admin
-            ORDER BY id_admin
-            LIMIT 1
-        """)
+                produk = cursor.fetchone()
 
-        admin = cursor.fetchone()
+                if produk is None:
+                    print("\nProduk tidak ditemukan.")
+                    jeda()
+                    continue
 
-        if admin is None:
-            print("Belum ada Admin yang terdaftar.")
-            return
+                nama_produk = produk[0]
+                harga = float(produk[1])
+                stok = float(produk[2])
+                satuan = produk[3]
 
-        id_admin = admin[0]
+                # Jumlah produk yang sama yang sudah ada di keranjang
+                sudah_ada = 0
+                item_lama = None
 
-        # Membuat ID transaksi baru
-        cursor.execute("""
-            SELECT COALESCE(MAX(id_transaksi), 0) + 1
-            FROM transaksi
-        """)
+                for item in keranjang:
+                    if item["id_produk"] == id_produk:
+                        sudah_ada = item["jumlah"]
+                        item_lama = item
 
-        id_transaksi = cursor.fetchone()[0]
+                tersedia = stok - sudah_ada
 
-        # Membuat ID detail transaksi baru
-        cursor.execute("""
-            SELECT COALESCE(MAX(id_detail), 0) + 1
-            FROM detail_transaksi
-        """)
+                if stok <= 0:
+                    print("\nMaaf, stok produk sedang habis.")
+                    jeda()
+                    continue
 
-        id_detail = cursor.fetchone()[0]
+                if tersedia <= 0:
+                    print("\nSeluruh stok produk ini sudah ada di keranjang.")
+                    jeda()
+                    continue
 
-        # Menyimpan transaksi
-        cursor.execute("""
-            INSERT INTO transaksi (
-                id_transaksi,
-                tanggal_transaksi,
-                total_harga,
-                pembeli_id_pembeli,
-                tanggal_pembayaran,
-                metode_pembayaran,
-                status_pembayaran,
-                admin_id_admin
-            )
-            VALUES (
-                %s, CURRENT_DATE, %s, %s,
-                NULL, NULL, 'Belum Dibayar', %s
-            )
-        """, (id_transaksi, total_harga, id_pembeli, id_admin))
+                print("\nProduk       :", nama_produk)
+                print(f"Harga        : Rp {harga:,.0f} / {satuan}")
+                print(f"Stok tersedia: {tersedia:g} {satuan}")
 
-        # Menyimpan detail transaksi
-        cursor.execute("""
-            INSERT INTO detail_transaksi (
-                id_detail,
-                jumlah,
-                harga_satuan,
-                transaksi_id_transaksi,
-                produk_id_produk
-            )
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            id_detail,
-            jumlah,
-            harga,
-            id_transaksi,
-            id_produk
-        ))
+                try:
+                    jumlah = float(input("\nMasukkan jumlah pembelian: "))
+                except ValueError:
+                    print("\nJumlah harus berupa angka.")
+                    jeda()
+                    continue
 
-        koneksi.commit()
+                if jumlah <= 0:
+                    print("\nJumlah pembelian harus lebih dari 0.")
+                    jeda()
+                    continue
 
-        print("\nTransaksi berhasil dibuat!")
-        print("ID Transaksi :", id_transaksi)
-        print("Total Harga  : Rp", total_harga)
-        print("Status       : Belum Dibayar")
-        print("Silakan lakukan pembayaran.")
+                if jumlah > tersedia:
+                    print("\nJumlah pembelian melebihi stok tersedia.")
+                    print(f"Stok tersedia: {tersedia:g} {satuan}")
+                    jeda()
+                    continue
+
+                if item_lama is not None:
+                    item_lama["jumlah"] += jumlah
+                else:
+                    keranjang.append({
+                        "id_produk": id_produk,
+                        "nama": nama_produk,
+                        "harga": harga,
+                        "jumlah": jumlah,
+                        "satuan": satuan
+                    })
+
+                print("\nProduk berhasil ditambahkan ke keranjang!")
+                jeda()
+
+            # ---------- HAPUS PRODUK ----------
+            elif menu == "2":
+                if len(keranjang) == 0:
+                    print("\nKeranjang masih kosong.")
+                    jeda()
+                    continue
+
+                nomor = input("\nNomor produk yang dihapus: ").strip()
+
+                if not nomor.isdigit():
+                    print("\nInput harus berupa angka!")
+                    jeda()
+                    continue
+
+                nomor = int(nomor)
+
+                if nomor < 1 or nomor > len(keranjang):
+                    print("\nNomor produk tidak tersedia!")
+                    jeda()
+                    continue
+
+                keranjang.pop(nomor - 1)
+                print("\nProduk berhasil dihapus dari keranjang!")
+                jeda()
+                continue
+
+            # ---------- BUAT TRANSAKSI ----------
+            elif menu == "3":
+                if len(keranjang) == 0:
+                    print("\nTambahkan minimal satu produk!")
+                    jeda()
+                    continue
+
+                konfirmasi = input(
+                    "\nBuat transaksi ini? (y/n): "
+                ).strip().lower()
+
+                if konfirmasi != "y":
+                    print("\nTransaksi belum dibuat.")
+                    jeda()
+                    continue
+
+                # Mengambil ID Admin
+                cursor.execute("""
+                    SELECT id_admin
+                    FROM admin
+                    ORDER BY id_admin
+                    LIMIT 1
+                """)
+
+                admin = cursor.fetchone()
+
+                if admin is None:
+                    print("\nBelum ada Admin yang terdaftar.")
+                    jeda()
+                    return
+
+                id_admin = admin[0]
+
+                # Membuat ID transaksi baru
+                cursor.execute("""
+                    SELECT COALESCE(MAX(id_transaksi), 0) + 1
+                    FROM transaksi
+                """)
+
+                id_transaksi = cursor.fetchone()[0]
+
+                # Menyimpan transaksi (satu transaksi untuk semua produk)
+                cursor.execute("""
+                    INSERT INTO transaksi (
+                        id_transaksi,
+                        tanggal_transaksi,
+                        total_harga,
+                        pembeli_id_pembeli,
+                        tanggal_pembayaran,
+                        metode_pembayaran,
+                        status_pembayaran,
+                        admin_id_admin
+                    )
+                    VALUES (
+                        %s, CURRENT_DATE, %s, %s,
+                        NULL, NULL, 'Belum Dibayar', %s
+                    )
+                """, (id_transaksi, total_harga, id_pembeli, id_admin))
+
+                # Membuat ID detail transaksi awal
+                cursor.execute("""
+                    SELECT COALESCE(MAX(id_detail), 0) + 1
+                    FROM detail_transaksi
+                """)
+
+                id_detail = cursor.fetchone()[0]
+
+                # Menyimpan satu detail untuk setiap produk
+                for item in keranjang:
+                    cursor.execute("""
+                        INSERT INTO detail_transaksi (
+                            id_detail,
+                            jumlah,
+                            harga_satuan,
+                            transaksi_id_transaksi,
+                            produk_id_produk
+                        )
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (
+                        id_detail,
+                        item["jumlah"],
+                        item["harga"],
+                        id_transaksi,
+                        item["id_produk"]
+                    ))
+
+                    id_detail += 1
+
+                koneksi.commit()
+
+                print("\nTransaksi berhasil dibuat!")
+                print("ID Transaksi  :", id_transaksi)
+                print("Jumlah produk :", len(keranjang))
+                print(f"Total Harga   : Rp {total_harga:,.0f}")
+                print("Status        : Belum Dibayar")
+                print("Silakan lakukan pembayaran.")
+                jeda()
+                return
+
+            # ---------- BATAL ----------
+            elif menu == "0":
+                print("\nPembelian dibatalkan.")
+                jeda()
+                return
+
+            else:
+                print("\nPilihan tidak valid!")
+                jeda()
 
     except psycopg2.Error as error:
         koneksi.rollback()
         print("Gagal membuat transaksi:", error)
+        jeda()
 
     finally:
         cursor.close()
@@ -216,6 +353,7 @@ def beli_produk(id_pembeli):
 # ==========================================
 
 def bayar_transaksi(id_pembeli):
+    clear()
     print("\n========== PEMBAYARAN ==========")
 
     koneksi = buka_koneksi()
@@ -237,6 +375,7 @@ def bayar_transaksi(id_pembeli):
 
         if not data:
             print("Tidak ada transaksi yang menunggu pembayaran.")
+            jeda()
             return
 
         print("\nDaftar Transaksi Belum Dibayar:")
@@ -259,6 +398,7 @@ def bayar_transaksi(id_pembeli):
 
         if transaksi is None:
             print("Transaksi tidak ditemukan atau sudah dibayar.")
+            jeda()
             return
 
         total_harga = float(transaksi[0])
@@ -288,6 +428,7 @@ def bayar_transaksi(id_pembeli):
         if not stok_cukup:
             koneksi.rollback()
             print("Pembayaran belum dapat dilakukan.")
+            jeda()
             return
 
         print("\nTotal yang harus dibayar: Rp", total_harga)
@@ -314,6 +455,7 @@ def bayar_transaksi(id_pembeli):
         if konfirmasi.lower() != "y":
             koneksi.rollback()
             print("Pembayaran dibatalkan.")
+            jeda()
             return
 
         # Mengurangi stok produk setelah pembayaran
@@ -355,10 +497,62 @@ def bayar_transaksi(id_pembeli):
 # 4. MEMERIKSA KETERSEDIAAN STOK
 # ==========================================
 
-def periksa_stok():
-    print("\n========== KETERSEDIAAN STOK ==========")
+def periksa_stok(tunggu=True):
+    clear()
+    print("\n========== STOK PRODUK ==========")
 
-    lihat_produk()
+    koneksi = buka_koneksi()
+
+    if koneksi is None:
+        return
+
+    cursor = koneksi.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT p.id_produk, p.nama_produk,
+                   k.nama_kategori, p.stok, p.satuan
+            FROM produk p
+            JOIN kategori_produk k
+                ON p.kategori_produk_id_kategori = k.id_kategori
+            WHERE p.harga_jual > 0
+            ORDER BY p.id_produk
+        """)
+
+        data = cursor.fetchall()
+
+        if not data:
+            print("Belum ada produk.")
+        else:
+            print("+----+----------------------+----------------+----------+--------+---------------+")
+            print("| ID | Nama Produk          | Kategori       | Stok     | Satuan | Keterangan    |")
+            print("+----+----------------------+----------------+----------+--------+---------------+")
+
+            for produk in data:
+                jumlah_stok = float(produk[3])
+                stok = f"{jumlah_stok:g}"
+
+                if jumlah_stok <= 0:
+                    keterangan = "Stok Habis"
+                elif jumlah_stok <= 10:
+                    keterangan = "Menipis"
+                else:
+                    keterangan = "Tersedia"
+
+                print(f"| {produk[0]:<2} | {produk[1]:<20} | {produk[2]:<14} | {stok:<8} | {produk[4]:<6} | {keterangan:<13} |")
+
+            
+        print("+----+----------------------+----------------+--------------+----------+---------+")
+
+        if tunggu:
+            jeda()
+
+    except psycopg2.Error as error:
+        print("Gagal menampilkan produk:", error)
+
+    finally:
+        cursor.close()
+        koneksi.close()
 
 
 # ==========================================
@@ -366,6 +560,7 @@ def periksa_stok():
 # ==========================================
 
 def riwayat_transaksi(id_pembeli):
+    clear()
     print("\n========== RIWAYAT TRANSAKSI ==========")
 
     koneksi = buka_koneksi()
@@ -409,8 +604,6 @@ def riwayat_transaksi(id_pembeli):
                         ON d.produk_id_produk = p.id_produk
                     WHERE d.transaksi_id_transaksi = %s
                 """, (transaksi[0],))
-
-                jeda()
 
                 detail = cursor.fetchall()
 
@@ -459,6 +652,7 @@ def menu_pembeli(id_pembeli):
 
         elif pilihan == "4":
             bayar_transaksi(id_pembeli)
+            jeda()
 
         elif pilihan == "5":
             riwayat_transaksi(id_pembeli)
