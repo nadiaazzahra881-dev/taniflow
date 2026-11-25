@@ -502,7 +502,7 @@ def lihat_produk(tunggu=True):
 # 4. MENGELOLA DATA PRODUK
 # =====================================
 
-def pilih_kategori(cursor, judul="DATA PETANI"):
+def pilih_kategori(cursor, judul="DATA PRODUK"):
     clear()
     print("=" * 55)
     print(judul)
@@ -523,129 +523,129 @@ def pilih_kategori(cursor, judul="DATA PETANI"):
 
 
 def tambah_produk(id_admin):
-    clear()
-    koneksi = buka_koneksi()
+    while True:
+        clear()
+        koneksi = buka_koneksi()
 
-    if koneksi is None:
-        return
-
-    cursor = koneksi.cursor()
-
-    try:
-        data_kategori = pilih_kategori(cursor, False, "TAMBAH PRODUK")
-
-        if len(data_kategori) == 0:
-            print("Belum ada kategori produk!")
-            jeda()
+        if koneksi is None:
             return
 
-        id_kategori = input("\nPilih ID kategori: ").strip()
+        cursor = koneksi.cursor()
 
-        if not id_kategori:
-            print("ID kategori tidak boleh kosong.")
-            jeda()
-            return
-        if id_kategori.isdigit():
-            id_kategori = int(id_kategori)
-
-            if not any(kategori[0] == id_kategori for kategori in data_kategori):
-                print("\n[!] ID kategori tidak ditemukan!")
+        try:
+            data_kategori = pilih_kategori(cursor, "TAMBAH PRODUK")
+            if len(data_kategori) == 0:
+                print("Belum ada kategori produk!")
                 jeda()
                 return
-        
-        else:
-            print("\n[!] Input tidak valid!")
+
+            id_kategori = input("\nPilih ID kategori: ").strip()
+
+            if not id_kategori:
+                print("ID kategori tidak boleh kosong.")
+                jeda()
+                return
+            if id_kategori.isdigit():
+                id_kategori = int(id_kategori)
+
+                if not any(kategori[0] == id_kategori for kategori in data_kategori):
+                    print("\n[!] ID kategori tidak ditemukan!")
+                    jeda()
+                    return
+            
+            else:
+                print("\n[!] Input tidak valid!")
+                jeda()
+                return
+
+            # NAMA PRODUK
+            nama = input("Nama produk: ").strip().title()
+
+            if not nama:
+                print("Nama produk tidak boleh kosong.")
+                jeda()
+                return
+            
+            if not nama or not any(huruf.isalnum() for huruf in nama):
+                print("\n[!] Input tidak valid!")
+                jeda()
+                return
+
+            # PILIH SATUAN
+            print("Pilih satuan produk:")
+            print("1. Kg")
+            print("2. Sisir")
+            print("3. Ikat")
+            print("4. Buah")
+            print("5. Karung")
+
+            pilihan_satuan = input("Pilih satuan (1-6): ").strip()
+            if not pilihan_satuan:
+                print("\nSatuan tidak boleh kosong!")
+                jeda()
+                continue
+            elif pilihan_satuan == "1":
+                satuan = "Kg"
+            elif pilihan_satuan == "2":
+                satuan = "Sisir"
+            elif pilihan_satuan == "3":
+                satuan = "Ikat"
+            elif pilihan_satuan == "4":
+                satuan = "Buah"
+            elif pilihan_satuan == "5":
+                satuan = "Karung"
+            else:
+                print("\nPilihan satuan tidak valid!")
+                jeda()
+                continue
+
+            # HARGA JUAL
+            harga = input("Harga jual: ").strip()
+
+            if not harga.isdigit() or int(harga) <= 0:
+                print("\n[!] Input harga tidak valid!")
+                return
+
+            # STOK AWAL
+            stok = input("Stok awal: ").strip()
+
+            if not stok.isdigit():
+                print("\n[!] Input stok tidak valid!")
+                return
+
+            # MEMBUAT ID PRODUK
+            cursor.execute("""
+                SELECT COALESCE(MAX(id_produk), 0) + 1
+                FROM produk
+            """)
+
+            id_baru = cursor.fetchone()[0]
+
+            # MENYIMPAN PRODUK
+            cursor.execute("""
+                INSERT INTO produk (
+                    id_produk, nama_produk, satuan,
+                    harga_jual, stok, admin_id_admin,
+                    kategori_produk_id_kategori
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                id_baru, nama, satuan, int(harga),
+                int(stok), id_admin, id_kategori
+            ))
+
+            koneksi.commit()
+            print("\nProduk berhasil ditambahkan!")
             jeda()
-            return
 
-        # NAMA PRODUK
-        nama = input("Nama produk: ").strip().title()
-
-        if not nama:
-            print("Nama produk tidak boleh kosong.")
+        except psycopg2.Error:
+            koneksi.rollback()
+            print("\n[!] Gagal menambahkan produk!")
             jeda()
-            return
-        
-        if not nama or not any(huruf.isalnum() for huruf in nama):
-            print("\n[!] Input tidak valid!")
-            jeda()
-            return
 
-        # PILIH SATUAN
-        print("Pilih satuan produk:")
-        print("1. Kg")
-        print("2. Sisir")
-        print("3. Ikat")
-        print("4. Buah")
-        print("5. Karung")
-
-        pilihan = input("Pilih satuan (1-6): ").strip()
-
-        if not pilihan:
-            print("ID kategori tidak boleh kosong.")
-            jeda()
-        if pilihan == "1":
-            satuan = "Kg"
-        elif pilihan == "2":
-            satuan = "Sisir"
-        elif pilihan == "3":
-            satuan = "Ikat"
-        elif pilihan == "4":
-            satuan = "Buah"
-        elif pilihan == "5":
-            satuan = "Karung"
-        else:
-            print("\n[!] Input tidak valid!")
-            jeda()
-            return
-
-        # HARGA JUAL
-        harga = input("Harga jual: ").strip()
-
-        if not harga.isdigit() or int(harga) <= 0:
-            print("\n[!] Input harga tidak valid!")
-            return
-
-        # STOK AWAL
-        stok = input("Stok awal: ").strip()
-
-        if not stok.isdigit():
-            print("\n[!] Input stok tidak valid!")
-            return
-
-        # MEMBUAT ID PRODUK
-        cursor.execute("""
-            SELECT COALESCE(MAX(id_produk), 0) + 1
-            FROM produk
-        """)
-
-        id_baru = cursor.fetchone()[0]
-
-        # MENYIMPAN PRODUK
-        cursor.execute("""
-            INSERT INTO produk (
-                id_produk, nama_produk, satuan,
-                harga_jual, stok, admin_id_admin,
-                kategori_produk_id_kategori
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            id_baru, nama, satuan, int(harga),
-            int(stok), id_admin, id_kategori
-        ))
-
-        koneksi.commit()
-        print("\nProduk berhasil ditambahkan!")
-        jeda()
-
-    except psycopg2.Error:
-        koneksi.rollback()
-        print("\n[!] Gagal menambahkan produk!")
-        jeda()
-
-    finally:
-        cursor.close()
-        koneksi.close()
+        finally:
+            cursor.close()
+            koneksi.close()
 
 
 def ubah_produk(id_admin):
@@ -968,7 +968,7 @@ def lihat_hasil_panen():
             JOIN produk p
                 ON h.produk_id_produk = p.id_produk
             WHERE pg.status_pengajuan = 'Diterima'
-            ORDER BY h.tanggal_penerimaan ASC
+            ORDER BY h.id_hasil ASC
         """)
 
         data = cursor.fetchall()
@@ -1012,15 +1012,11 @@ def setujui_pengajuan(id_admin):
     try:
         cursor = koneksi.cursor()
 
-        # Menampilkan pengajuan yang menunggu persetujuan
         cursor.execute("""
-            SELECT pg.id_pengajuan,
-                   pet.nama_petani,
-                   pg.tanggal_pengajuan,
-                   pg.catatan
+            SELECT pg.id_pengajuan, pet.nama_petani,
+                   pg.tanggal_pengajuan, pg.catatan
             FROM pengajuan_panen pg
-            JOIN petani pet
-                ON pg.petani_id_petani = pet.id_petani
+            JOIN petani pet ON pg.petani_id_petani = pet.id_petani
             WHERE pg.status_pengajuan = 'Menunggu'
             ORDER BY pg.id_pengajuan
         """)
@@ -1029,6 +1025,7 @@ def setujui_pengajuan(id_admin):
 
         if len(data) == 0:
             print("\nTidak ada pengajuan yang menunggu persetujuan.")
+            jeda()
             return
 
         print("\nDAFTAR PENGAJUAN")
@@ -1039,45 +1036,33 @@ def setujui_pengajuan(id_admin):
             print("Tanggal      :", pengajuan[2])
             print("Catatan      :", pengajuan[3] or "-")
 
-        id_pengajuan = input(
-            "\nMasukkan ID pengajuan: "
-        ).strip()
+        id_pengajuan = input("\nMasukkan ID pengajuan: ").strip()
 
         if not id_pengajuan.isdigit():
-            print("\nID pengajuan harus terisi angka!")
+            print("\nID pengajuan harus berupa angka!")
+            jeda()
             return
 
         id_pengajuan = int(id_pengajuan)
 
-        # Memeriksa pengajuan
         cursor.execute("""
-            SELECT pg.id_pengajuan,
-                pet.nama_petani,
-                pg.tanggal_pengajuan,
-                pg.status_pengajuan,
-                pg.catatan
-            FROM pengajuan_panen pg
-            JOIN petani pet
-                ON pg.petani_id_petani = pet.id_petani
-            WHERE pg.status_pengajuan = 'Menunggu'
-            ORDER BY pg.tanggal_pengajuan ASC
-        """)
+            SELECT id_pengajuan
+            FROM pengajuan_panen
+            WHERE id_pengajuan = %s
+              AND status_pengajuan = 'Menunggu'
+            FOR UPDATE
+        """, (id_pengajuan,))
 
         if cursor.fetchone() is None:
             print("\nPengajuan tidak ditemukan atau sudah diproses!")
+            jeda()
             return
 
-        # Mengambil seluruh rincian hasil panen
         cursor.execute("""
-            SELECT hp.id_hasil,
-                   p.id_produk,
-                   p.nama_produk,
-                   hp.jumlah_panen,
-                   p.satuan,
-                   p.harga_jual
+            SELECT hp.id_hasil, p.id_produk, p.nama_produk,
+                   hp.jumlah_panen, p.satuan, p.harga_jual
             FROM hasil_panen hp
-            JOIN produk p
-                ON hp.produk_id_produk = p.id_produk
+            JOIN produk p ON hp.produk_id_produk = p.id_produk
             WHERE hp.pengajuan_panen_id_pengajuan = %s
             ORDER BY hp.id_hasil
         """, (id_pengajuan,))
@@ -1086,80 +1071,118 @@ def setujui_pengajuan(id_admin):
 
         if len(daftar_produk) == 0:
             print("\nRincian hasil panen tidak ditemukan!")
+            jeda()
             return
 
-        print("\n========== DETAIL PENGAJUAN ==========")
+        disetujui = 0
+        ditolak = []
 
         for i, produk in enumerate(daftar_produk, start=1):
-            print(f"\n{i}. {produk[2]}")
-            print("   Jumlah     :", produk[3], produk[4])
+            id_hasil = produk[0]
+            id_produk = produk[1]
+            nama = produk[2]
+            produk_baru = (produk[5] == 0)
 
-            if produk[5] == 0:
-                print("   Keterangan : Produk Baru")
+            print("\n" + "=" * 45)
+            print(f"PRODUK {i} DARI {len(daftar_produk)}")
+            print("=" * 45)
+            print("Nama Produk :", nama)
+            print("Jumlah      :", produk[3], produk[4])
+
+            if produk_baru:
+                print("Keterangan  : PRODUK BARU")
             else:
-                print("   Harga Jual : Rp", produk[5])
+                print("Harga Jual  : Rp", produk[5])
 
-        # Menentukan harga jual produk baru
-        for produk in daftar_produk:
+            while True:
+                if produk_baru:
+                    print("\n1. Setujui produk baru ini")
+                    print("2. Tolak produk baru ini")
+                else:
+                    print("\n1. Setujui")
+                    print("2. Tolak")
 
-            if produk[5] == 0:
-                print("\n========== PRODUK BARU ==========")
-                print("Nama Produk :", produk[2])
-                print("Satuan      :", produk[4])
+                keputusan = input("Pilih tindakan: ").strip()
 
-                harga = input("Masukkan harga jual: ").strip()
+                if keputusan in ("1", "2"):
+                    break
 
-                try:
-                    harga = float(harga)
+                print("Pilihan tidak valid!")
 
-                    if harga <= 0:
-                        print("\nHarga harus lebih dari 0!")
-                        koneksi.rollback()
-                        return
+            # ----- TOLAK -----
+            if keputusan == "2":
+                cursor.execute("""
+                    DELETE FROM hasil_panen
+                    WHERE id_hasil = %s
+                """, (id_hasil,))
 
-                except ValueError:
-                    print("\nHarga harus berupa angka!")
-                    koneksi.rollback()
-                    return
+                if produk_baru:
+                    # Hapus produk penampung supaya tidak tersisa di tabel produk
+                    cursor.execute("""
+                        DELETE FROM produk
+                        WHERE id_produk = %s
+                          AND harga_jual = 0
+                          AND stok = 0
+                          AND NOT EXISTS (
+                              SELECT 1 FROM hasil_panen
+                              WHERE produk_id_produk = %s
+                          )
+                          AND NOT EXISTS (
+                              SELECT 1 FROM detail_transaksi
+                              WHERE produk_id_produk = %s
+                          )
+                    """, (id_produk, id_produk, id_produk))
+
+                ditolak.append(nama)
+                print("-> Produk ditolak.")
+                continue
+
+            # ----- SETUJUI -----
+            if produk_baru:
+                print("\nProduk baru disetujui. Tentukan harga jual.")
+
+                while True:
+                    harga = input("Masukkan harga jual: ").strip()
+
+                    try:
+                        harga = float(harga)
+                        if harga > 0:
+                            break
+                        print("Harga harus lebih dari 0!")
+                    except ValueError:
+                        print("Harga harus berupa angka!")
 
                 cursor.execute("""
                     UPDATE produk
                     SET harga_jual = %s
                     WHERE id_produk = %s
-                """, (
-                    harga,
-                    produk[1]
-                ))
+                """, (harga, id_produk))
 
-        # Pilihan persetujuan
-        print("\n========== KEPUTUSAN ADMIN ==========")
-        print("1. Setujui Pengajuan")
-        print("2. Tolak Pengajuan")
+            disetujui += 1
+            print("-> Produk disetujui.")
 
-        pilihan = input("\nPilih tindakan: ").strip()
+        print("\n========== RINGKASAN KEPUTUSAN ==========")
+        print("Disetujui :", disetujui, "produk")
+        print("Ditolak   :", len(ditolak), "produk")
 
-        if pilihan == "1":
-            status = "Disetujui"
+        simpan = input("\nSimpan keputusan ini? (y/n): ").strip().lower()
 
-        elif pilihan == "2":
-            status = "Ditolak"
-
-        else:
-            print("\nPilihan tidak valid!")
+        if simpan != "y":
             koneksi.rollback()
+            print("\nKeputusan dibatalkan. Tidak ada data yang berubah.")
+            jeda()
             return
 
-        # Mengubah status pengajuan
+        status = "Disetujui" if disetujui > 0 else "Ditolak"
+        catatan_tolak = (" | Ditolak: " + ", ".join(ditolak)) if ditolak else ""
+
         cursor.execute("""
             UPDATE pengajuan_panen
             SET status_pengajuan = %s,
-                admin_id_admin = %s
+                admin_id_admin = %s,
+                catatan = COALESCE(catatan, '') || %s
             WHERE id_pengajuan = %s
-        """, (
-            status,
-            id_admin,
-            id_pengajuan
-        ))
+        """, (status, id_admin, catatan_tolak, id_pengajuan))
 
         koneksi.commit()
 
@@ -1181,6 +1204,8 @@ def setujui_pengajuan(id_admin):
             cursor.close()
 
         koneksi.close()
+
+    jeda()
 
 
 
@@ -1301,8 +1326,9 @@ def terima_hasil_panen(id_admin):
             WHERE pengajuan_panen_id_pengajuan = %s
         """, (id_pengajuan,))
 
-        # Memperbarui harga beli berdasarkan harga jual produk
-        for produk in daftar_produk:
+        # Memperbarui harga beli dan stok untuk SETIAP produk
+        for produk in daftar_produk:                      # <-- PERBAIKAN
+
             cursor.execute("""
                 UPDATE hasil_panen
                 SET harga_beli = %s
@@ -1312,15 +1338,15 @@ def terima_hasil_panen(id_admin):
                 produk[0]
             ))
 
-        # Menambahkan jumlah panen ke stok
-        cursor.execute("""
-            UPDATE produk
-            SET stok = stok + %s
-            WHERE id_produk = %s
-        """, (
-            produk[3],
-            produk[1]
-        ))
+            cursor.execute("""                            
+                UPDATE produk
+                SET stok = stok + %s
+                WHERE id_produk = %s
+            """, (
+                produk[3],
+                produk[1]
+            ))                                            # <-- PERBAIKAN: di dalam for
+
         
         # Mengubah status pengajuan
         cursor.execute("""

@@ -45,9 +45,6 @@ def lihat_produk(tunggu=True):
             
             print("+----+----------------------+----------------+--------------+---------+")
 
-        if tunggu:
-            jeda()
-
     except psycopg2.Error as error:
         print("Gagal menampilkan produk:", error)
 

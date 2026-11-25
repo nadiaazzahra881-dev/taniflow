@@ -141,7 +141,7 @@ def kirim_pengajuan(id_petani):
 
                 pilihan_satuan = input("Pilih satuan (1-5): ").strip()
 
-                if not satuan:
+                if not pilihan_satuan:
                     print("\nSatuan tidak boleh kosong!")
                     jeda()
                     continue
