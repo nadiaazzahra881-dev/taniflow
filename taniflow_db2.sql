@@ -255,4 +255,4 @@ VALUES
 (4, 'Biji-bijian', 'Produk hasil panen berupa biji-bijian'),
 (5, 'Rempah-rempah', 'Produk hasil panen berupa rempah');
 
-SELECT * FROM pembeli;
+SELECT * FROM pengajuan_panen;
