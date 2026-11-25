@@ -77,7 +77,7 @@ def kirim_pengajuan(id_petani):
 
             print(f"{pilihan_baru}. Produk belum tersedia")
 
-            print("\n0. Kembali")
+            print("\n0. Kembali ke menu")
 
             pilihan = input("\nPilih produk: ").strip()
 
@@ -87,7 +87,7 @@ def kirim_pengajuan(id_petani):
             if not pilihan.isdigit():
                 print("\nPilihan tidak valid!")
                 jeda()
-                continue
+                return
 
             pilihan = int(pilihan)
 
@@ -257,7 +257,7 @@ def kirim_pengajuan(id_petani):
         print("\n========== CATATAN TAMBAHAN ==========")
         catatan = input("Catatan (opsional): ").strip()
 
-        # Mengambil ID pengajuan baru
+               # Mengambil ID pengajuan baru
         cursor.execute("""
             SELECT COALESCE(MAX(id_pengajuan), 0) + 1
             FROM pengajuan_panen
@@ -265,23 +265,40 @@ def kirim_pengajuan(id_petani):
 
         id_pengajuan = cursor.fetchone()[0]
 
-       # Menyimpan pengajuan
+        # Mengambil ID admin terkecil sebagai admin awal
+        cursor.execute("""
+            SELECT id_admin
+            FROM admin
+            ORDER BY id_admin
+            LIMIT 1
+        """)
+
+        data_admin = cursor.fetchone()
+
+        if data_admin is None:
+            raise Exception("Data Admin belum tersedia!")
+
+        id_admin = data_admin[0]
+
+        # Menyimpan pengajuan
         cursor.execute("""
             INSERT INTO pengajuan_panen (
                 id_pengajuan,
                 tanggal_pengajuan,
                 status_pengajuan,
                 catatan,
-                petani_id_petani
+                petani_id_petani,
+                admin_id_admin
             )
             VALUES (
                 %s, CURRENT_DATE, 'Menunggu',
-                %s, %s
+                %s, %s, %s
             )
         """, (
             id_pengajuan,
             catatan if catatan else None,
-            id_petani
+            id_petani,
+            id_admin
         ))
 
         # Menyimpan produk dan hasil panen
