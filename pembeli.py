@@ -389,6 +389,8 @@ def riwayat_transaksi(id_pembeli):
 
         if not data:
             print("Belum ada riwayat transaksi.")
+            jeda()
+            return
 
         else:
             for transaksi in data:
@@ -427,14 +429,13 @@ def riwayat_transaksi(id_pembeli):
     finally:
         cursor.close()
         koneksi.close()
-jeda()
+    jeda()
 
 # ==========================================
 # 6. MENU PEMBELI
 # ==========================================
 
 def menu_pembeli(id_pembeli):
-    clear()
     while True:
         clear()
         print("\n========== MENU PEMBELI ==========")
