@@ -207,24 +207,29 @@ def registrasi():
         print("-" * 55)
 
         nama_jalan = input("  Nama jalan        : ").strip()
+        if not nama_jalan:
+            print("\n  [!] Nama jalan tidak boleh kosong!")
+            return
+        
         nomor_rumah = input("  Nomor rumah       : ").strip()
+
         rt = input("  RT                : ").strip()
+        if rt and not rt.isdigit():
+            print("\n  [!] RT harus berupa angka!")
+            return
+        
         rw = input("  RW                : ").strip()
-        kelurahan = input("  Kelurahan         : ").strip().title()
+        if rw and not rw.isdigit():
+            print("\n  [!] RW harus berupa angka!")
+            return
+
+        kelurahan = input("  Kelurahan         : ").strip().title() 
         kecamatan = input("  Kecamatan         : ").strip().title()
         kota = input("  Kota              : ").strip().title()
         kode_pos = input("  Kode pos          : ").strip()
 
-        if not nama_jalan:
-            print("\n  [!] Nama jalan tidak boleh kosong!")
-            return
-
         if not kelurahan or not kecamatan or not kota:
             print("\n  [!] Kelurahan, kecamatan, dan kota wajib diisi!")
-            return
-
-        if rt and not rt.isdigit():
-            print("\n  [!] RT harus berupa angka!")
             return
 
         if rw and not rw.isdigit():

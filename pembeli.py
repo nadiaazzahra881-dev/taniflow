@@ -306,6 +306,7 @@ def bayar_transaksi(id_pembeli):
         else:
             print("Pilihan metode pembayaran tidak valid.")
             koneksi.rollback()
+            jeda()
             return
 
         konfirmasi = input("\nKonfirmasi pembayaran? (y/n): ")
@@ -426,7 +427,7 @@ def riwayat_transaksi(id_pembeli):
     finally:
         cursor.close()
         koneksi.close()
-
+jeda()
 
 # ==========================================
 # 6. MENU PEMBELI
@@ -467,5 +468,6 @@ def menu_pembeli(id_pembeli):
 
         else:
             print("Pilihan tidak valid.")
+            jeda()
 
 

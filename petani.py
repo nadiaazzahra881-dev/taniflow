@@ -7,6 +7,7 @@ from bantuan import clear, jeda
 # 1. MENGIRIM DATA HASIL PANEN
 # =====================================
 
+
 def kirim_pengajuan(id_petani):
     clear()
     print("\n========== PENGAJUAN HASIL PANEN ==========")
@@ -25,12 +26,29 @@ def kirim_pengajuan(id_petani):
 
         # Mengambil daftar produk
         cursor.execute("""
-            SELECT id_produk, nama_produk, satuan
-            FROM produk
-            ORDER BY id_produk
+            SELECT p.id_produk, p.nama_produk, p.satuan,
+                   k.nama_kategori
+            FROM produk p
+            JOIN kategori_produk k
+                ON p.kategori_produk_id_kategori = k.id_kategori
+            ORDER BY p.id_produk
         """)
 
         data_produk = cursor.fetchall()
+
+        # Mengambil daftar kategori
+        cursor.execute("""
+            SELECT id_kategori, nama_kategori
+            FROM kategori_produk
+            ORDER BY id_kategori
+        """)
+
+        data_kategori = cursor.fetchall()
+
+        if len(data_kategori) == 0:
+            print("\nKategori produk belum tersedia!")
+            jeda()
+            return
 
         daftar_pengajuan = []
 
@@ -42,16 +60,22 @@ def kirim_pengajuan(id_petani):
                 print("\nDAFTAR PRODUK YANG DIAJUKAN")
 
                 for i, produk in enumerate(daftar_pengajuan, start=1):
-                    print(f"{i}. {produk['nama']} - {produk['jumlah']} {produk['satuan']}")
+                    print(
+                        f"{i}. {produk['nama']} - "
+                        f"{produk['jumlah']} {produk['satuan']}"
+                    )
 
             print("\nPILIH PRODUK")
 
             for i, produk in enumerate(data_produk, start=1):
-                print(f"{i}. {produk[1]} ({produk[2]})")
+                print(
+                    f"{i}. {produk[1]} "
+                    f"({produk[2]}) - {produk[3]}"
+                )
 
             pilihan_baru = len(data_produk) + 1
 
-            print(f"{pilihan_baru}. Produk belum tersedia (masukkan dalam catatan)")
+            print(f"{pilihan_baru}. Produk belum tersedia")
 
             print("\n0. Kembali")
 
@@ -74,6 +98,7 @@ def kirim_pengajuan(id_petani):
 
             # Produk belum tersedia
             if pilihan == pilihan_baru:
+
                 nama = input("\nMasukkan nama produk: ").strip()
 
                 if not nama:
@@ -81,12 +106,58 @@ def kirim_pengajuan(id_petani):
                     jeda()
                     continue
 
-                satuan = input("Masukkan satuan produk: ").strip()
+                # Memilih kategori
+                print("\n========== PILIH KATEGORI ==========")
+
+                for i, kategori in enumerate(data_kategori, start=1):
+                    print(f"{i}. {kategori[1]}")
+
+                pilih_kategori = input(
+                    "\nPilih kategori: "
+                ).strip()
+
+                if not pilih_kategori.isdigit():
+                    print("\nPilihan kategori tidak valid!")
+                    jeda()
+                    continue
+
+                pilih_kategori = int(pilih_kategori)
+
+                if pilih_kategori < 1 or pilih_kategori > len(data_kategori):
+                    print("\nKategori tidak tersedia!")
+                    jeda()
+                    continue
+
+                id_kategori = data_kategori[pilih_kategori - 1][0]
+                nama_kategori = data_kategori[pilih_kategori - 1][1]
+
+                print("\nPilih satuan produk:")
+                print("1. Kg")
+                print("2. Sisir")
+                print("3. Ikat")
+                print("4. Buah")
+                print("5. Karung")
+
+                pilihan_satuan = input("Pilih satuan (1-5): ").strip()
 
                 if not satuan:
                     print("\nSatuan tidak boleh kosong!")
                     jeda()
                     continue
+                elif pilihan_satuan == "1":
+                    satuan = "Kg"
+                elif pilihan_satuan == "2":
+                    satuan = "Sisir"
+                elif pilihan_satuan == "3":
+                    satuan = "Ikat"
+                elif pilihan_satuan == "4":
+                    satuan = "Buah"
+                elif pilihan_satuan == "5":
+                    satuan = "Karung"
+                else:
+                    print("\nPilihan satuan tidak valid!")
+                    jeda()
+                    return
 
                 id_produk = None
 
@@ -97,7 +168,10 @@ def kirim_pengajuan(id_petani):
                 id_produk = produk[0]
                 nama = produk[1]
                 satuan = produk[2]
+                id_kategori = None
+                nama_kategori = produk[3]
 
+            # Memasukkan jumlah panen
             jumlah = input("Jumlah panen: ").strip()
 
             try:
@@ -117,7 +191,9 @@ def kirim_pengajuan(id_petani):
                 "id_produk": id_produk,
                 "nama": nama,
                 "jumlah": jumlah,
-                "satuan": satuan
+                "satuan": satuan,
+                "id_kategori": id_kategori,
+                "nama_kategori": nama_kategori
             })
 
             print("\nProduk berhasil ditambahkan!")
@@ -128,7 +204,10 @@ def kirim_pengajuan(id_petani):
                 print("\n========== DAFTAR PRODUK ==========")
 
                 for i, produk in enumerate(daftar_pengajuan, start=1):
-                    print(f"{i}. {produk['nama']} - {produk['jumlah']} {produk['satuan']}")
+                    print(
+                        f"{i}. {produk['nama']} - "
+                        f"{produk['jumlah']} {produk['satuan']}"
+                    )
 
                 print("\n1. Tambah produk")
                 print("2. Hapus produk")
@@ -140,12 +219,10 @@ def kirim_pengajuan(id_petani):
                     break
 
                 elif menu == "2":
-                    if len(daftar_pengajuan) == 0:
-                        print("\nBelum ada produk!")
-                        jeda()
-                        continue
 
-                    nomor = input("Nomor produk yang dihapus: ").strip()
+                    nomor = input(
+                        "Nomor produk yang dihapus: "
+                    ).strip()
 
                     if nomor.isdigit():
                         nomor = int(nomor)
@@ -161,6 +238,7 @@ def kirim_pengajuan(id_petani):
                     jeda()
 
                 elif menu == "3":
+
                     if len(daftar_pengajuan) == 0:
                         print("\nTambahkan minimal satu produk!")
                         jeda()
@@ -177,25 +255,7 @@ def kirim_pengajuan(id_petani):
 
         # Catatan tambahan
         print("\n========== CATATAN TAMBAHAN ==========")
-        catatan_tambahan = input("Catatan (opsional): ").strip()
-
-        # Menyusun daftar produk menjadi catatan
-        catatan = "DAFTAR PRODUK YANG DIAJUKAN:\n"
-
-        for produk in daftar_pengajuan:
-            if produk["id_produk"] is None:
-                catatan += (
-                    f"- Produk belum tersedia: {produk['nama']} | "
-                    f"Jumlah: {produk['jumlah']} {produk['satuan']}\n"
-                )
-            else:
-                catatan += (
-                    f"- {produk['nama']} (ID: {produk['id_produk']}) | "
-                    f"Jumlah: {produk['jumlah']} {produk['satuan']}\n"
-                )
-
-        if catatan_tambahan:
-            catatan += "\nCatatan tambahan: " + catatan_tambahan
+        catatan = input("Catatan (opsional): ").strip()
 
         # Mengambil ID pengajuan baru
         cursor.execute("""
@@ -203,58 +263,116 @@ def kirim_pengajuan(id_petani):
             FROM pengajuan_panen
         """)
 
-        id_baru = cursor.fetchone()[0]
+        id_pengajuan = cursor.fetchone()[0]
 
-        # Mengambil Admin penanggung jawab
-        cursor.execute("""
-            SELECT id_admin
-            FROM admin
-            ORDER BY id_admin
-            LIMIT 1
-        """)
-
-        data_admin = cursor.fetchone()
-
-        if data_admin is None:
-            print("\nData Admin belum tersedia!")
-            koneksi.rollback()
-            jeda()
-            return
-
-        id_admin = data_admin[0]
-
-        # Menyimpan pengajuan
+       # Menyimpan pengajuan
         cursor.execute("""
             INSERT INTO pengajuan_panen (
                 id_pengajuan,
                 tanggal_pengajuan,
                 status_pengajuan,
                 catatan,
-                petani_id_petani,
-                admin_id_admin
+                petani_id_petani
             )
             VALUES (
                 %s, CURRENT_DATE, 'Menunggu',
-                %s, %s, %s
+                %s, %s
             )
         """, (
-            id_baru,
-            catatan,
-            id_petani,
-            id_admin
+            id_pengajuan,
+            catatan if catatan else None,
+            id_petani
         ))
+
+        # Menyimpan produk dan hasil panen
+        for produk in daftar_pengajuan:
+
+            id_produk = produk["id_produk"]
+
+            # Membuat produk baru secara otomatis
+            if id_produk is None:
+
+                cursor.execute("""
+                    SELECT COALESCE(MAX(id_produk), 0) + 1
+                    FROM produk
+                """)
+
+                id_produk = cursor.fetchone()[0]
+
+                # Mengambil ID admin terkecil
+                cursor.execute("""
+                    SELECT id_admin
+                    FROM admin
+                    ORDER BY id_admin
+                    LIMIT 1
+                """)
+
+                data_admin = cursor.fetchone()
+
+                if data_admin is None:
+                    raise Exception("Data Admin belum tersedia!")
+
+                id_admin = data_admin[0]
+
+                cursor.execute("""
+                    INSERT INTO produk (
+                        id_produk,
+                        nama_produk,
+                        satuan,
+                        harga_jual,
+                        stok,
+                        admin_id_admin,
+                        kategori_produk_id_kategori
+                    )
+                    VALUES (%s, %s, %s, 0, 0, %s, %s)
+                """, (
+                    id_produk,
+                    produk["nama"],
+                    produk["satuan"],
+                    id_admin,
+                    produk["id_kategori"]
+                ))
+
+            # Mengambil ID hasil panen baru
+            cursor.execute("""
+                SELECT COALESCE(MAX(id_hasil), 0) + 1
+                FROM hasil_panen
+            """)
+
+            id_hasil = cursor.fetchone()[0]
+
+            # Menyimpan rincian hasil panen
+            cursor.execute("""
+                INSERT INTO hasil_panen (
+                    id_hasil,
+                    tanggal_penerimaan,
+                    jumlah_panen,
+                    harga_beli,
+                    produk_id_produk,
+                    pengajuan_panen_id_pengajuan
+                )
+                VALUES (
+                    %s, CURRENT_DATE, %s, 0, %s, %s
+                )
+            """, (
+                id_hasil,
+                produk["jumlah"],
+                id_produk,
+                id_pengajuan
+            ))
 
         koneksi.commit()
 
         print("\nPengajuan hasil panen berhasil dikirim!")
-        print("ID Pengajuan:", id_baru)
+        print("ID Pengajuan:", id_pengajuan)
         print("Jumlah jenis produk:", len(daftar_pengajuan))
         print("Status: Menunggu")
 
-    except psycopg2.Error:
+    except psycopg2.Error as e:
         koneksi.rollback()
+
         print("\nGagal mengirim pengajuan!")
-        print("Terjadi kesalahan pada database.")
+        print("Detail:", e)
 
     finally:
         if cursor is not None:
@@ -290,6 +408,7 @@ def lihat_hasil_panen(id_petani):
             JOIN produk p
                 ON h.produk_id_produk = p.id_produk
             WHERE pg.petani_id_petani = %s
+            AND pg.status_pengajuan = 'Diterima'
             ORDER BY h.tanggal_penerimaan ASC
         """, (id_petani,))
 
@@ -317,7 +436,6 @@ def lihat_hasil_panen(id_petani):
 
     jeda()
 
-
 # =====================================
 # 3. MELIHAT RIWAYAT PENGAJUAN PANEN
 # =====================================
@@ -333,14 +451,17 @@ def riwayat_pengajuan(id_petani):
 
     try:
         cursor.execute("""
-            SELECT id_pengajuan,
-                   tanggal_pengajuan,
-                   jumlah_diajukan,
-                   status_pengajuan,
-                   catatan
-            FROM pengajuan_panen
-            WHERE petani_id_petani = %s
-            ORDER BY tanggal_pengajuan ASC
+            SELECT pg.id_pengajuan,
+                   pg.tanggal_pengajuan,
+                   COALESCE(SUM(h.jumlah_panen), 0),
+                   pg.status_pengajuan,
+                   pg.catatan
+            FROM pengajuan_panen pg
+            LEFT JOIN hasil_panen h
+                ON pg.id_pengajuan = h.pengajuan_panen_id_pengajuan
+            WHERE pg.petani_id_petani = %s
+            GROUP BY pg.id_pengajuan
+            ORDER BY pg.tanggal_pengajuan ASC
         """, (id_petani,))
 
         data = cursor.fetchall()
