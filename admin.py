@@ -1,6 +1,7 @@
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear, jeda
+from bantuan import clear, jeda, subbab,garis_ganda,garis,garis_tipis, garis_titik, garis_bintang
+from colorama import Fore, Style
 
 # =====================================
 # 1. DASHBOARD ADMIN
@@ -31,7 +32,7 @@ def dashboard():
         cursor.execute("SELECT COUNT(*) FROM transaksi")
         jumlah_transaksi = cursor.fetchone()[0]
 
-        print("\n========== DASHBOARD ADMIN ==========")
+        subbab("DASHBOARD ADMIN")
         print("Jumlah Petani      :", jumlah_petani)
         print("Jumlah Produk      :", jumlah_produk)
         print("Jumlah Stok        :", jumlah_stok)
@@ -50,9 +51,9 @@ def dashboard():
 # =====================================
 
 def lihat_petani(cursor, tunggu=True, judul="DATA PETANI"):
-    print("=" * 55)
-    print(judul)
-    print("=" * 55)
+    garis()
+    print(Fore.GREEN + judul.center(52) + Style.RESET_ALL)
+    garis()
 
     cursor.execute("""
         SELECT id_petani, nama_petani, no_telepon,
@@ -86,9 +87,7 @@ def lihat_petani(cursor, tunggu=True, judul="DATA PETANI"):
 
 def tambah_petani():
     clear()
-    print("=" * 55)
-    print("TAMBAH PETANI")
-    print("=" * 55)
+    subbab("TAMBAH PETANI") 
 
     nama = input("  Nama petani: ").strip().title()
     if not nama:
@@ -407,7 +406,7 @@ def kelola_petani():
     while True:
         clear()
 
-        print("\n========== KELOLA DATA PETANI ==========")
+        subbab("KELOLA DATA PETANI")
         print("1. Lihat Petani")
         print("2. Tambah Petani")
         print("3. Ubah Petani")
@@ -452,7 +451,7 @@ def kelola_petani():
 
 def lihat_produk(tunggu=True):
     clear()
-    print("=========== KELOLA DATA PRODUK ==========")
+    subbab("KELOLA DATA PRODUK")
     koneksi = buka_koneksi()
    
     if koneksi is None:
@@ -488,9 +487,6 @@ def lihat_produk(tunggu=True):
             
             print("+----+----------------------+----------------+--------------+---------+")
 
-            if tunggu:
-                jeda()
-
     except psycopg2.Error as error:
         print("Gagal menampilkan produk:", error)
 
@@ -504,9 +500,9 @@ def lihat_produk(tunggu=True):
 
 def pilih_kategori(cursor, judul="DATA PRODUK"):
     clear()
-    print("=" * 55)
-    print(judul)
-    print("=" * 55)
+    garis()
+    print(Fore.GREEN + judul.center(52) + Style.RESET_ALL)
+    garis()
 
     cursor.execute("""
         SELECT id_kategori, nama_kategori
@@ -650,8 +646,7 @@ def tambah_produk(id_admin):
 
 def ubah_produk(id_admin):
     clear()
-    print("\n========== UBAH PRODUK ==========")
-
+    subbab("UBAH PRODUK")
     koneksi = buka_koneksi()
 
     if koneksi is None:
@@ -667,6 +662,7 @@ def ubah_produk(id_admin):
 
         if not id_produk:
             print("ID produk tidak boleh kosong.")
+            jeda()
             return
         if id_produk.isdigit():
             cursor.execute("""
@@ -677,9 +673,11 @@ def ubah_produk(id_admin):
 
             if cursor.fetchone() is None:
                 print("\n[!] ID produk tidak ditemukan!")
+                jeda()
                 return
         else:
             print("\n[!] Input tidak valid!")
+            jeda()
             return
 
         # MENAMPILKAN KATEGORI
@@ -687,6 +685,7 @@ def ubah_produk(id_admin):
 
         if len(data_kategori) == 0:
             print("Belum ada kategori produk!")
+            jeda()
             return
 
         print("\nMasukkan data produk yang baru.")
@@ -695,10 +694,12 @@ def ubah_produk(id_admin):
         nama = input("Nama produk: ").strip().title()
 
         if not nama:
-                    print("nama tidak boleh kosong.")
-                    return
+            print("nama tidak boleh kosong.")
+            jeda()
+            return
         if not nama or not any(huruf.isalnum() for huruf in nama):
             print("\n[!] Input tidak valid!")
+            jeda()
             return
 
         # PILIH SATUAN
@@ -713,6 +714,7 @@ def ubah_produk(id_admin):
 
         if not pilihan:
             print("Pilihan tidak boleh kosong.")
+            jeda()
         if pilihan == "1":
             satuan = "Kg"
         elif pilihan == "2":
@@ -725,6 +727,7 @@ def ubah_produk(id_admin):
             satuan = "Karung"
         else:
             print("\n[!] Input tidak valid!")
+            jeda()
             return
 
         # HARGA JUAL
@@ -732,9 +735,11 @@ def ubah_produk(id_admin):
 
         if not harga:
             print("harga tidak boleh kosong.")
+            jeda()
             return
         if not harga.isdigit() or int(harga) <= 0:
             print("\n[!] Input harga tidak valid!")
+            jeda()
             return
 
         # STOK
@@ -742,9 +747,11 @@ def ubah_produk(id_admin):
 
         if not stok:
             print("stok tidak boleh kosong")
+            jeda()
             return
         if not stok.isdigit():
             print("\n[!] Input stok tidak valid!")
+            jeda()
             return
 
         # ID KATEGORI
@@ -752,6 +759,7 @@ def ubah_produk(id_admin):
 
         if not id_kategori:
             print("id_kategori tidak boleh kosong.")
+            jeda()
             return
 
         if id_kategori.isdigit():
@@ -759,10 +767,12 @@ def ubah_produk(id_admin):
 
             if not any(kategori[0] == id_kategori for kategori in data_kategori):
                 print("\n[!] ID kategori tidak ditemukan!")
+                jeda()
                 return
 
         else:
             print("\n[!] Input tidak valid!")
+            jeda()
             return
 
         # UPDATE PRODUK
@@ -811,7 +821,7 @@ def hapus_produk():
 
         data = cursor.fetchall()
 
-        print("\n========== DATA PRODUK ==========")
+        subbab("HAPUS PRODUK")
 
         for produk in data:
             print(produk[0], "-", produk[1])
@@ -820,6 +830,7 @@ def hapus_produk():
 
         if not id_produk:
             print("ID produk tidak boleh kosong.")
+            jeda()
             return
 
         if id_produk.isdigit():
@@ -839,6 +850,7 @@ def hapus_produk():
         else:
             koneksi.rollback()
             print("[!] Input tidak valid!")
+            jeda()
             return
 
     except psycopg2.Error:
@@ -853,7 +865,7 @@ def menu_produk(id_admin):
     clear()
     while True:
         clear()
-        print("\n========== KELOLA PRODUK ==========")
+        subbab("KELOLA PRODUK")
         print("1. Tambah Produk")
         print("2. Ubah Produk")
         print("3. Hapus Produk")
@@ -876,6 +888,7 @@ def menu_produk(id_admin):
         else:
             print("Pilihan tidak valid!")
             jeda()
+            return
 
 
 # =====================================
@@ -884,7 +897,7 @@ def menu_produk(id_admin):
 
 def lihat_stok(tunggu=True):
     clear()
-    print("\n========== STOK PRODUK ==========")
+    subbab("STOK PRODUK")
 
     koneksi = buka_koneksi()
 
@@ -973,7 +986,7 @@ def lihat_hasil_panen():
 
         data = cursor.fetchall()
 
-        print("\n========== DATA HASIL PANEN ==========")
+        subbab("DATA HASIL PANEN")
 
         if len(data) == 0:
             print("Belum ada data hasil panen yang diterima.")
@@ -998,13 +1011,12 @@ def lihat_hasil_panen():
 
 def setujui_pengajuan(id_admin):
     clear()
-    print("\n========== PERSETUJUAN PENGAJUAN PANEN ==========")
+    subbab("PERSETUJUAN PENGAJUAN PANEN")
 
     koneksi = buka_koneksi()
 
     if koneksi is None:
         print("\nGagal terhubung ke database!")
-        jeda()
         return
 
     cursor = None
@@ -1025,10 +1037,10 @@ def setujui_pengajuan(id_admin):
 
         if len(data) == 0:
             print("\nTidak ada pengajuan yang menunggu persetujuan.")
-            jeda()
             return
 
-        print("\nDAFTAR PENGAJUAN")
+        print("DAFTAR PENGAJUAN :")
+        garis_tipis()
 
         for pengajuan in data:
             print("\nID Pengajuan :", pengajuan[0])
@@ -1040,7 +1052,6 @@ def setujui_pengajuan(id_admin):
 
         if not id_pengajuan.isdigit():
             print("\nID pengajuan harus berupa angka!")
-            jeda()
             return
 
         id_pengajuan = int(id_pengajuan)
@@ -1055,7 +1066,6 @@ def setujui_pengajuan(id_admin):
 
         if cursor.fetchone() is None:
             print("\nPengajuan tidak ditemukan atau sudah diproses!")
-            jeda()
             return
 
         cursor.execute("""
@@ -1071,7 +1081,6 @@ def setujui_pengajuan(id_admin):
 
         if len(daftar_produk) == 0:
             print("\nRincian hasil panen tidak ditemukan!")
-            jeda()
             return
 
         disetujui = 0
@@ -1170,7 +1179,6 @@ def setujui_pengajuan(id_admin):
         if simpan != "y":
             koneksi.rollback()
             print("\nKeputusan dibatalkan. Tidak ada data yang berubah.")
-            jeda()
             return
 
         status = "Disetujui" if disetujui > 0 else "Ditolak"
@@ -1216,7 +1224,7 @@ def setujui_pengajuan(id_admin):
 
 def terima_hasil_panen(id_admin):
     clear()
-    print("\n========== PENERIMAAN HASIL PANEN ==========")
+    subbab("PENERIMAAN HASIL PANEN")
 
     koneksi = buka_koneksi()
 
@@ -1394,7 +1402,7 @@ def terima_hasil_panen(id_admin):
 
 def lihat_transaksi():
     clear()
-    print("\n========== DATA TRANSAKSI ==========")
+    subbab("DATA TRANSAKSI")
 
     koneksi = buka_koneksi()
 
@@ -1503,7 +1511,7 @@ def lihat_transaksi():
 
 def konfirmasi_pembayaran(id_admin):
     clear()
-    print("\n========== KONFIRMASI PEMBAYARAN ==========")
+    subbab("KONFIRMASI PEMBAYARAN")
 
     koneksi = buka_koneksi()
 
@@ -1536,6 +1544,12 @@ def konfirmasi_pembayaran(id_admin):
             print("Metode       :", transaksi[3])
 
         id_transaksi = input("\nMasukkan ID transaksi: ")
+        if id_transaksi == "":
+            print("ID transaksi tidak boleh kosong!")
+        elif not id_transaksi.isdigit():
+            print("ID transaksi harus berupa angka!")
+        else:
+            print("Pilihan tidak valid.")
 
         # Mengambil detail transaksi dan memeriksa stok
         cursor.execute("""
@@ -1653,7 +1667,7 @@ def laporan_penjualan():
     """)
         data = cursor.fetchall()
 
-        print("\n========== LAPORAN PENJUALAN ==========")
+        subbab("LAPORAN PENJUALAN")
 
         if len(data) == 0:
             print("Belum ada data penjualan.")
@@ -1689,7 +1703,7 @@ def laporan_penjualan():
 def menu_admin(id_admin):
     while True:
         clear()
-        print("\n========== MENU ADMIN ==========")
+        subbab("MENU ADMIN")
         print("1. Dashboard")
         print("2. Kelola Data Petani")
         print("3. Melihat Produk")

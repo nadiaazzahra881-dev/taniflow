@@ -1,13 +1,13 @@
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear,jeda
+from bantuan import clear,jeda, subbab, garis,garis_tipis
 
 # ==========================================
 # 1. MELIHAT PRODUK
 # ==========================================
 
 def lihat_produk(tunggu=True):
-    print("\n========== DAFTAR PRODUK ==========")
+    subbab("DAFTAR PRODUK")
 
     koneksi = buka_koneksi()
 
@@ -59,7 +59,7 @@ def lihat_produk(tunggu=True):
 
 
 def tampilkan_keranjang(keranjang):
-    print("\n========== KERANJANG BELANJA ==========")
+    print("\n----------KERANJANG BELANJA ----------")
 
     if len(keranjang) == 0:
         print("Keranjang masih kosong.")
@@ -95,8 +95,7 @@ def beli_produk(id_pembeli):
     try:
         while True:
             clear()
-            print("\n========== PEMBELIAN PRODUK ==========")
-
+            subbab("PEMBELIAN PRODUK")
             total_harga = tampilkan_keranjang(keranjang)
 
             print("\n1. Tambah produk")
@@ -109,17 +108,14 @@ def beli_produk(id_pembeli):
             # ---------- TAMBAH PRODUK ----------
             if menu == "1":
                 clear()
-                lihat_produk(False)
+                lihat_produk()
 
                 id_produk = input(
-                    "\nMasukkan ID produk (0 = kembali): "
+                    "\nMasukkan ID produk: "
                 ).strip()
 
-                if id_produk == "0":
-                    continue
-
                 if not id_produk.isdigit():
-                    print("\nID produk harus berupa angka!")
+                    print("\nID produk tidak boleh kosong dan harus berupa angka!")
                     jeda()
                     continue
 
@@ -351,7 +347,7 @@ def beli_produk(id_pembeli):
 
 def bayar_transaksi(id_pembeli):
     clear()
-    print("\n========== PEMBAYARAN ==========")
+    subbab("PEMBAYARAN")
 
     koneksi = buka_koneksi()
 
@@ -382,6 +378,12 @@ def bayar_transaksi(id_pembeli):
             print("Total Harga  : Rp", transaksi[1])
 
         id_transaksi = input("\nMasukkan ID transaksi yang ingin dibayar: ")
+        if id_transaksi == "":
+            print("ID transaksi tidak boleh kosong!")
+        elif not id_transaksi.isdigit():
+            print("ID transaksi harus berupa angka!")
+        else:
+            print("Pilihan tidak valid!")
 
         cursor.execute("""
             SELECT total_harga
@@ -428,8 +430,10 @@ def bayar_transaksi(id_pembeli):
             jeda()
             return
 
+        garis_tipis()
         print("\nTotal yang harus dibayar: Rp", total_harga)
-        print("\nPilih metode pembayaran:")
+        garis_tipis()
+        print("Pilih metode pembayaran:")
         print("1. Tunai")
         print("2. Transfer")
 
@@ -447,9 +451,17 @@ def bayar_transaksi(id_pembeli):
             jeda()
             return
 
-        konfirmasi = input("\nKonfirmasi pembayaran? (y/n): ")
+        while True:
+            konfirmasi = input("\nKonfirmasi pembayaran? (y/n): ").lower()
 
-        if konfirmasi.lower() != "y":
+            if konfirmasi == "":
+                print("Konfirmasi tidak boleh kosong!")
+            elif konfirmasi not in ["y", "n"]:
+                print("Masukkan hanya y atau n!")
+            else:
+                break
+
+        if konfirmasi == "n":
             koneksi.rollback()
             print("Pembayaran dibatalkan.")
             jeda()
@@ -496,7 +508,7 @@ def bayar_transaksi(id_pembeli):
 
 def periksa_stok(tunggu=True):
     clear()
-    print("\n========== STOK PRODUK ==========")
+    subbab("STOK PRODUK")
 
     koneksi = buka_koneksi()
 
@@ -558,7 +570,7 @@ def periksa_stok(tunggu=True):
 
 def riwayat_transaksi(id_pembeli):
     clear()
-    print("\n========== RIWAYAT TRANSAKSI ==========")
+    subbab("RIWAYAT TRANSAKSI")
 
     koneksi = buka_koneksi()
 
@@ -628,7 +640,7 @@ def riwayat_transaksi(id_pembeli):
 def menu_pembeli(id_pembeli):
     while True:
         clear()
-        print("\n========== MENU PEMBELI ==========")
+        subbab("MENU PEMBELI")
         print("1. Melihat Produk")
         print("2. Memilih Produk")
         print("3. Memeriksa Ketersediaan Stok")
@@ -640,6 +652,7 @@ def menu_pembeli(id_pembeli):
 
         if pilihan == "1":
             lihat_produk()
+            jeda()
 
         elif pilihan == "2":
             beli_produk(id_pembeli)

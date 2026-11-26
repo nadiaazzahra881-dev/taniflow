@@ -2,8 +2,9 @@ from koneksi import buka_koneksi
 import psycopg2
 from admin import menu_admin
 from pembeli import menu_pembeli
-from bantuan import clear,jeda
+from bantuan import clear,jeda, tampilkan_judul,garis,keluar, garis_ganda, garis_tipis,garis_titik
 from petani import menu_petani
+
 # =========================
 # FUNGSI LOGIN
 # =========================
@@ -11,12 +12,9 @@ from petani import menu_petani
 
 def login():
     clear()
-    print("=" * 55)
-    print("                    TANIFLOW")
-    print("             SISTEM INFORMASI PERTANIAN")
-    print("=" * 55)
-    print("                   LOGIN AKUN  ")
-    print("-" * 55)
+    tampilkan_judul()
+    print("                        LOGIN AKUN")
+    garis_tipis()
     print("Silakan masukkan informasi akun Anda:")
 
     no_telepon = input("\n  Nomor telepon     : ").strip()
@@ -82,9 +80,12 @@ def login():
             nama = data[0][1]
             role = data[0][2]
 
-            print("\nLogin berhasil!")
+            print()
+            garis_ganda()
+            print("Login berhasil!")
             print("Selamat datang,", nama)
             print("Role:", role)
+            garis_ganda()
 
             input("\nTekan Enter untuk melanjutkan...")
 
@@ -120,12 +121,9 @@ def login():
 def registrasi():
     clear()
 
-    print("=" * 55)
-    print("                    TANIFLOW")
-    print("             SISTEM INFORMASI PERTANIAN")
-    print("=" * 55)
-    print("                 REGISTRASI AKUN")
-    print("-" * 55)
+    tampilkan_judul()
+    print("                    REGISTRASI AKUN")
+    garis_tipis()
     print("  Silakan pilih jenis akun yang ingin dibuat.")
     print()
     print("  [1] Petani")
@@ -150,23 +148,16 @@ def registrasi():
 
     clear()
 
-    print("=" * 55)
-    print("                    TANIFLOW")
-    print("=" * 55)
-    print()
-    print("              FORM REGISTRASI", role.upper())
-    print("-" * 55)
-    print("  Silakan lengkapi data akun berikut.")
-    print()
+    tampilkan_judul()
+    print("                 FORM REGISTRASI", role.upper())
+    garis_tipis()
+    print("Silakan lengkapi data akun berikut:")
 
     # DATA AKUN
-    print("[ DATA AKUN ]")
-    print("-" * 55)
-
     if role == "Petani":
-        nama = input("  Nama petani       : ").strip().title()
+        nama = input("\n  Nama petani       : ").strip().title()
     else:
-        nama = input("  Nama pembeli      : ").strip().title()
+        nama = input("\n  Nama pembeli      : ").strip().title()
 
     if not nama:
         print("\n  [!] Nama tidak boleh kosong!")
@@ -202,9 +193,6 @@ def registrasi():
 
     # DATA ALAMAT PETANI
     if role == "Petani":
-        print()
-        print("[ DATA ALAMAT ]")
-        print("-" * 55)
 
         nama_jalan = input("  Nama jalan        : ").strip()
         if not nama_jalan:
@@ -298,13 +286,12 @@ def registrasi():
 
         clear()
 
-        print("=" * 55)
-        print("                    TANIFLOW")
-        print("=" * 55)
+        tampilkan_judul()
         print()
-        print("             REGISTRASI BERHASIL!")
-        print("-" * 55)
-        print("  Akun berhasil dibuat.")
+        garis_ganda()
+        print("                    REGISTRASI BERHASIL!")
+        print("                 Akun telah berhasil dibuat")
+        garis_ganda()
         print()
         print("  ID Akun       :", id_baru)
         print("  Nama          :", nama)
@@ -359,15 +346,14 @@ def registrasi():
 def main():
     while True:
         clear()
-        print("=" * 55)
-        print("                    TANIFLOW")
-        print("=" * 55)
+
+        tampilkan_judul()
 
         # DATA AKUN
-        print("[ AKSES AKUN ]")
-        print("-" * 55)
         
-        print("1. Login")
+        garis_tipis()
+        
+        print("\n1. Login")
         print("2. Registrasi")
         print("3. Keluar")
 
@@ -382,9 +368,7 @@ def main():
             input("\nTekan Enter untuk kembali ke menu utama...")
 
         elif pilihan == "3":
-            print("-" * 55)
-            print("Terima kasih telah menggunakan TaniFlow!")
-            print("-" * 55)
+            keluar()
             return
 
         else:

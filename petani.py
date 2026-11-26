@@ -1,7 +1,7 @@
 
 from koneksi import buka_koneksi
 import psycopg2
-from bantuan import clear, jeda
+from bantuan import clear, jeda, subbab,garis_ganda,garis,garis_tipis
 
 # =====================================
 # 1. MENGIRIM DATA HASIL PANEN
@@ -514,7 +514,7 @@ def riwayat_pengajuan(id_petani):
 def menu_petani(id_petani):
     while True:
         clear()
-        print("\n========== MENU PETANI ==========")
+        subbab("MENU PETANI")
         print("1. Mengirim Data Hasil Panen")
         print("2. Melihat Data Hasil Panen")
         print("3. Melihat Riwayat Penyerahan Hasil Panen")
