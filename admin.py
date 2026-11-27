@@ -1544,6 +1544,7 @@ def konfirmasi_pembayaran(id_admin):
             print("Metode       :", transaksi[3])
 
         id_transaksi = input("\nMasukkan ID transaksi: ")
+        
         if id_transaksi == "":
             print("ID transaksi tidak boleh kosong!")
         elif not id_transaksi.isdigit():
